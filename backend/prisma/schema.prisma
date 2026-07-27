@@ -1,0 +1,233 @@
+// SpeakIntel AI - Database Schema
+// PostgreSQL hosted on Supabase, managed via Prisma ORM
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = 5
+}
+
+// ============================================
+// USER & AUTH
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  googleId      String?   @unique
+  level         String    @default("intermediate") // beginner, intermediate, advanced
+  xp            Int       @default(0)
+  coins         Int       @default(0)
+  currentLevel  Int       @default(1)
+  streak        Int       @default(0)
+  lastPractice  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  sessions       Session[]
+  vocabulary     VocabularyWord[]
+  achievements   UserAchievement[]
+  dailyProgress  DailyProgress[]
+  subscription   Subscription?
+  notifications  Notification[]
+  interviewReports InterviewReport[]
+
+  @@map("users")
+}
+
+// ============================================
+// SESSIONS & CONVERSATIONS
+// ============================================
+
+model Session {
+  id          String   @id @default(cuid())
+  userId      String
+  mode        String   // general, interview, roleplay, grammar, pronunciation
+  role        String?  // specific role for interview/roleplay
+  status      String   @default("active") // active, paused, completed
+  duration    Int      @default(0) // seconds
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+
+  // Scores
+  grammarScore       Float?
+  fluencyScore       Float?
+  vocabularyScore    Float?
+  confidenceScore    Float?
+  pronunciationScore Float?
+  overallScore       Float?
+
+  // Relations
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ConversationMessage[]
+
+  @@map("sessions")
+}
+
+model ConversationMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String   // user, ai
+  content   String
+  audioUrl  String?
+  feedback  Json?    // { original, corrected, explanation }
+  scores    Json?    // { grammar, fluency, vocabulary, ... }
+  createdAt DateTime @default(now())
+
+  // Relations
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("conversation_messages")
+}
+
+// ============================================
+// VOCABULARY
+// ============================================
+
+model VocabularyWord {
+  id              String   @id @default(cuid())
+  userId          String
+  word            String
+  meaning         String
+  pronunciation   String?
+  hindiTranslation String?
+  synonyms        String[] // Array of synonyms
+  antonyms        String[] // Array of antonyms
+  exampleSentence String?
+  difficulty      String   @default("intermediate")
+  mastered        Boolean  @default(false)
+  reviewCount     Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, word])
+  @@map("vocabulary_words")
+}
+
+// ============================================
+// INTERVIEWS
+// ============================================
+
+model InterviewReport {
+  id              String   @id @default(cuid())
+  userId          String
+  role            String
+  questionsAsked  Int      @default(0)
+  
+  // Scores
+  confidenceScore     Float?
+  technicalScore      Float?
+  communicationScore  Float?
+  grammarScore        Float?
+  vocabularyScore     Float?
+  overallScore        Float?
+
+  // Feedback
+  strengths       String[]
+  weaknesses      String[]
+  improvementPlan String[]
+  
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("interview_reports")
+}
+
+// ============================================
+// PROGRESS & GAMIFICATION
+// ============================================
+
+model DailyProgress {
+  id              String   @id @default(cuid())
+  userId          String
+  date            DateTime @db.Date
+  practiceTime    Int      @default(0) // minutes
+  sessionsCount   Int      @default(0)
+  wordsLearned    Int      @default(0)
+  grammarScore    Float?
+  fluencyScore    Float?
+  xpEarned        Int      @default(0)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("daily_progress")
+}
+
+model Achievement {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+  icon        String
+  xpReward    Int    @default(0)
+  condition   String // JSON condition for unlocking
+
+  // Relations
+  users UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+// ============================================
+// SUBSCRIPTIONS
+// ============================================
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  plan      String   @default("free") // free, pro, enterprise
+  status    String   @default("active") // active, cancelled, expired
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // reminder, achievement, report, system
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}

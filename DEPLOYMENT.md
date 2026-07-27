@@ -31,12 +31,17 @@ This guide walks you through deploying the entire **SpeakIntel AI** stack comple
 5. Configure the following settings:
    - **Environment**: `Docker`
    - **Instance Type**: `Free`
+   - **Build Command** (if not using Docker): `pip install -r requirements.txt && prisma db push`
+   - **Start Command** (if not using Docker): `uvicorn app.main:app --host 0.0.0.0 --port 8000`
 6. Add the following **Environment Variables**:
-   - `DATABASE_URL`: Your Supabase connection string
+   - `DATABASE_URL`: Your Supabase connection string (use the transaction pooler version for best performance)
    - `GEMINI_API_KEY`: Your Google Gemini API Key
    - `NEXTAUTH_SECRET`: A secure base64 random secret
    - `CORS_ORIGINS`: `https://[your-vercel-domain].vercel.app` (Add after deploying frontend)
 7. Click **Deploy Web Service**.
+
+> [!TIP]
+> Since Render runs over native IPv6 networks, it can connect directly to your Supabase host on port `5432` without using a pooler! If you deploy via a Python environment on Render instead of Docker, you can run the migration command (`prisma db push`) automatically during the build step.
 
 ---
 

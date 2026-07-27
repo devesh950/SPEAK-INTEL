@@ -23,8 +23,6 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_anon_key: str = ""
     
-    # Redis
-    redis_url: str = ""
     
     # CORS
     cors_origins: List[str] = ["http://localhost:3000"]

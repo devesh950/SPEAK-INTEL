@@ -9,7 +9,6 @@ This guide walks you through deploying the entire **SpeakIntel AI** stack comple
 - **Frontend**: Vercel (Hobby/Free Tier)
 - **Backend API & WebSockets**: Render (Free Web Service)
 - **Database (PostgreSQL)**: Supabase (Free Tier)
-- **Caching/Redis**: Upstash (Serverless Free Tier)
 
 ---
 
@@ -23,17 +22,7 @@ This guide walks you through deploying the entire **SpeakIntel AI** stack comple
 
 ---
 
-## Step 2: Deploy Caching (Upstash Redis)
-
-1. Go to [Upstash](https://upstash.com) and log in.
-2. Click **Create Database**.
-3. Name it `speakintel-redis`.
-4. Copy the **Redis URL** under the connection details:
-   `redis://default:[YOUR-PASSWORD]@xxxxxx.upstash.io:6379`
-
----
-
-## Step 3: Deploy Backend (Render)
+## Step 2: Deploy Backend (Render)
 
 1. Push your repository to **GitHub**.
 2. Go to [Render](https://render.com) and log in.
@@ -44,7 +33,6 @@ This guide walks you through deploying the entire **SpeakIntel AI** stack comple
    - **Instance Type**: `Free`
 6. Add the following **Environment Variables**:
    - `DATABASE_URL`: Your Supabase connection string
-   - `REDIS_URL`: Your Upstash Redis connection string
    - `GEMINI_API_KEY`: Your Google Gemini API Key
    - `NEXTAUTH_SECRET`: A secure base64 random secret
    - `CORS_ORIGINS`: `https://[your-vercel-domain].vercel.app` (Add after deploying frontend)

@@ -48,4 +48,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
     strategy: "jwt",
   },
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "speakintel_default_secret_fallback_key_2026",
 });

@@ -1,0 +1,206 @@
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Mic, Volume2, RotateCcw, Check, X, ArrowRight } from "lucide-react";
+
+const sentences = [
+  {
+    id: 1,
+    text: "The quick brown fox jumps over the lazy dog.",
+    difficulty: "Easy",
+  },
+  {
+    id: 2,
+    text: "She sells seashells by the seashore.",
+    difficulty: "Medium",
+  },
+  {
+    id: 3,
+    text: "How much wood would a woodchuck chuck if a woodchuck could chuck wood?",
+    difficulty: "Hard",
+  },
+  {
+    id: 4,
+    text: "The technological advancements have significantly improved communication.",
+    difficulty: "Medium",
+  },
+  {
+    id: 5,
+    text: "Entrepreneurship requires resilience, creativity, and unwavering determination.",
+    difficulty: "Hard",
+  },
+];
+
+export default function PronunciationPage() {
+  const [currentSentence, setCurrentSentence] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
+  const [showResult, setShowResult] = useState(false);
+
+  const sentence = sentences[currentSentence];
+
+  const handleRecord = () => {
+    if (isRecording) {
+      setIsRecording(false);
+      setShowResult(true);
+    } else {
+      setIsRecording(true);
+      setShowResult(false);
+      // Simulate stopping after 4 seconds
+      setTimeout(() => {
+        setIsRecording(false);
+        setShowResult(true);
+      }, 4000);
+    }
+  };
+
+  const nextSentence = () => {
+    setCurrentSentence((prev) => (prev + 1) % sentences.length);
+    setShowResult(false);
+  };
+
+  return (
+    <div className="space-y-8 pb-20 lg:pb-0">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-2xl sm:text-3xl font-bold">Pronunciation Trainer</h1>
+        <p className="text-muted-foreground mt-1">
+          Listen, repeat, and perfect your pronunciation
+        </p>
+      </motion.div>
+
+      {/* Score Cards */}
+      <div className="grid grid-cols-4 gap-4">
+        {[
+          { label: "Accuracy", value: "78%", color: "text-emerald-400" },
+          { label: "Stress", value: "72%", color: "text-cyan-400" },
+          { label: "Intonation", value: "65%", color: "text-purple-400" },
+          { label: "Accent", value: "70%", color: "text-amber-400" },
+        ].map((stat) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="stat-card text-center"
+          >
+            <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
+            <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Practice Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card p-8 text-center max-w-2xl mx-auto"
+      >
+        {/* Difficulty Badge */}
+        <span className={`text-xs px-3 py-1 rounded-full ${
+          sentence.difficulty === "Easy" ? "bg-emerald-500/15 text-emerald-400" :
+          sentence.difficulty === "Medium" ? "bg-amber-500/15 text-amber-400" :
+          "bg-red-500/15 text-red-400"
+        }`}>
+          {sentence.difficulty}
+        </span>
+
+        {/* Sentence */}
+        <h2 className="text-xl sm:text-2xl font-medium mt-6 mb-2 leading-relaxed">
+          {sentence.text}
+        </h2>
+
+        {/* Listen Button */}
+        <button className="inline-flex items-center gap-2 text-sm text-primary-light hover:text-white transition-colors my-4">
+          <Volume2 className="w-4 h-4" />
+          Listen to pronunciation
+        </button>
+
+        {/* Record Button */}
+        <div className="mt-6">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleRecord}
+            className={`w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all ${
+              isRecording
+                ? "bg-red-500 shadow-lg shadow-red-500/30"
+                : "gradient-primary shadow-lg shadow-primary/30"
+            }`}
+          >
+            <Mic className="w-8 h-8 text-white" />
+          </motion.button>
+          <p className="text-xs text-muted-foreground mt-3">
+            {isRecording ? "Recording... Click to stop" : "Tap to record your pronunciation"}
+          </p>
+        </div>
+
+        {/* Result */}
+        {showResult && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8 space-y-4"
+          >
+            {/* Score */}
+            <div className="flex justify-center">
+              <div className="w-24 h-24 rounded-full gradient-primary flex items-center justify-center">
+                <span className="text-3xl font-bold">82</span>
+              </div>
+            </div>
+
+            {/* Word-by-word feedback */}
+            <div className="flex flex-wrap items-center justify-center gap-1 mt-4">
+              {sentence.text.split(" ").map((word, i) => {
+                const isCorrect = Math.random() > 0.3;
+                return (
+                  <span
+                    key={i}
+                    className={`px-2 py-1 rounded text-sm ${
+                      isCorrect
+                        ? "bg-emerald-500/10 text-emerald-400"
+                        : "bg-red-500/10 text-red-400 underline decoration-wavy"
+                    }`}
+                  >
+                    {word}
+                  </span>
+                );
+              })}
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-center gap-3 mt-4">
+              <button
+                onClick={() => setShowResult(false)}
+                className="btn-secondary text-sm flex items-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4" /> Try Again
+              </button>
+              <button
+                onClick={nextSentence}
+                className="btn-primary text-sm flex items-center gap-2"
+              >
+                Next <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* Sentence List */}
+      <div className="space-y-2 max-w-2xl mx-auto">
+        <h3 className="text-sm font-medium text-muted-foreground mb-3">All Sentences</h3>
+        {sentences.map((s, i) => (
+          <button
+            key={s.id}
+            onClick={() => { setCurrentSentence(i); setShowResult(false); }}
+            className={`w-full text-left p-3 rounded-xl text-sm transition-all ${
+              i === currentSentence ? "glass-strong border-primary/30" : "glass hover:bg-white/5"
+            }`}
+          >
+            <span className="text-muted-foreground mr-2">#{i + 1}</span>
+            {s.text}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

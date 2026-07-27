@@ -37,10 +37,41 @@ const navItems = [
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
 
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
+
+  useEffect(() => {
+    const cookies = document.cookie.split(";").map((c) => c.trim());
+    const hasSession = cookies.some(
+      (c) =>
+        c.startsWith("speakintel-demo-session=") ||
+        c.startsWith("authjs.session-token=") ||
+        c.startsWith("__Secure-authjs.session-token=") ||
+        c.startsWith("next-auth.session-token=") ||
+        c.startsWith("__Secure-next-auth.session-token=")
+    );
+
+    if (!hasSession) {
+      router.push(`/sign-in?callbackUrl=${encodeURIComponent(pathname)}`);
+    } else {
+      setAuthorized(true);
+    }
+  }, [pathname, router]);
+
+  if (!authorized) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex">

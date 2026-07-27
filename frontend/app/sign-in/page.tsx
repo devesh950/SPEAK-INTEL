@@ -40,6 +40,7 @@ export default function SignInPage() {
       if (result?.error) {
         setError("Invalid credentials or login failed.");
       } else {
+        document.cookie = "speakintel-demo-session=true; path=/; max-age=86400";
         window.location.href = "/dashboard";
       }
     } catch (err: any) {
@@ -63,6 +64,7 @@ export default function SignInPage() {
       if (result?.error) {
         setError("Demo login failed.");
       } else {
+        document.cookie = "speakintel-demo-session=true; path=/; max-age=86400";
         window.location.href = "/dashboard";
       }
     } catch (err) {

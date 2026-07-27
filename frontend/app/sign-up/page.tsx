@@ -42,6 +42,7 @@ export default function SignUpPage() {
       if (result?.error) {
         setError("Sign up failed.");
       } else {
+        document.cookie = "speakintel-demo-session=true; path=/; max-age=86400";
         window.location.href = "/dashboard";
       }
     } catch (err: any) {
@@ -65,6 +66,7 @@ export default function SignUpPage() {
       if (result?.error) {
         setError("Demo login failed.");
       } else {
+        document.cookie = "speakintel-demo-session=true; path=/; max-age=86400";
         window.location.href = "/dashboard";
       }
     } catch (err) {

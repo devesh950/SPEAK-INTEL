@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -36,9 +36,6 @@ const navItems = [
   { icon: Trophy, label: "Leaderboard", href: "/leaderboard" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
-
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

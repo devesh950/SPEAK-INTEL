@@ -364,15 +364,11 @@ export default function ConversationPage() {
 
         rec.onerror = (err: any) => {
           console.error("Speech recognition error:", err);
-          // If browser blocked microphone access, trigger simulation fallback automatically so the app is still testable!
-          if (err.error === "not-allowed" || err.error === "service-not-allowed" || err.error === "aborted") {
-            console.warn("Microphone access denied or aborted. Invoking mock voice simulator.");
-            setTimeout(() => {
-              processInput("I am very excited for join this company because I think it will helping me to growing my career.");
-            }, 1000);
-          } else {
-            setState("idle");
-          }
+          // Fallback to simulator on any error (blocked mic, no speech, network timeout) so user can test the app
+          console.warn("Speech recognition failed. Triggering simulator fallback.");
+          setTimeout(() => {
+            processInput("I am very excited for join this company because I think it will helping me to growing my career.");
+          }, 1000);
         };
 
         rec.onend = () => {

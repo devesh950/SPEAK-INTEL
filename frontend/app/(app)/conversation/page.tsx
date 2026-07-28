@@ -264,6 +264,9 @@ export default function ConversationPage() {
   const speakText = useCallback((text: string, onEndCallback?: () => void) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     window.speechSynthesis.cancel(); // stop any active speech
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
     setIsPaused(false);
 
     const utterance = new SpeechSynthesisUtterance(text);

@@ -147,9 +147,9 @@ class AICoach:
                 grammar_score = 5
 
             if corrected != user_message:
-                response_text = f"I heard you! Here is a tip to sound more natural: instead of saying \"{user_message}\", you should say \"{corrected}\".\n\n📝 **Feedback:**\n- **You said:** \"{user_message}\"\n- **Better version:** \"{corrected}\"\n- **Why:** {explanation}\n- **Score:** Grammar: {grammar_score}/10 | Fluency: 7/10 | Vocabulary: 6/10"
+                response_text = f"I heard you! Here is a tip to sound more natural: instead of saying \"{user_message}\", you should say \"{corrected}\".\n\n📝 **Feedback:**\n- **You said:** \"{user_message}\"\n- **Better version:** \"{corrected}\"\n- **Why:** {explanation} (API Error: {str(e)})\n- **Score:** Grammar: {grammar_score}/10 | Fluency: 7/10 | Vocabulary: 6/10"
             else:
-                response_text = f"That is a very clear explanation! Keep practicing to build confidence. Can you tell me more about your thoughts?\n\n📝 **Feedback:**\n- **You said:** \"{user_message}\"\n- **Better version:** \"{user_message}\"\n- **Why:** {explanation}\n- **Score:** Grammar: 9/10 | Fluency: 8/10 | Vocabulary: 8/10"
+                response_text = f"That is a very clear explanation! Keep practicing to build confidence. Can you tell me more about your thoughts?\n\n📝 **Feedback:**\n- **You said:** \"{user_message}\"\n- **Better version:** \"{user_message}\"\n- **Why:** {explanation} (API Error: {str(e)})\n- **Score:** Grammar: 9/10 | Fluency: 8/10 | Vocabulary: 8/10"
         
         # Parse scores from response (basic extraction)
         scores = self._extract_scores(response_text)

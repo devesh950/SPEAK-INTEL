@@ -395,6 +395,13 @@ export default function ConversationPage() {
       setIsPaused(false);
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
+        // Unlock browser speech synthesis autoplay restrictions
+        try {
+          const unlockUtterance = new SpeechSynthesisUtterance("");
+          window.speechSynthesis.speak(unlockUtterance);
+        } catch (e) {
+          console.warn("Failed to unlock TTS autoplay:", e);
+        }
       }
 
       setState("listening");
@@ -448,6 +455,16 @@ export default function ConversationPage() {
     if (!inputText.trim()) return;
     const text = inputText;
     setInputText("");
+
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      try {
+        const unlockUtterance = new SpeechSynthesisUtterance("");
+        window.speechSynthesis.speak(unlockUtterance);
+      } catch (e) {
+        console.warn("Failed to unlock TTS autoplay:", e);
+      }
+    }
+
     processInput(text);
   };
 

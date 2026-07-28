@@ -232,7 +232,7 @@ export default function ConversationPage() {
   const [showTranscript, setShowTranscript] = useState(false);
   const [inputText, setInputText] = useState("");
   const [isPaused, setIsPaused] = useState(false);
-  const [showSlowServerWarning, setShowSlowServerWarning] = useState(false);
+  const [hasSpokenGreeting, setHasSpokenGreeting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const recognitionRef = useRef<any>(null);
@@ -260,21 +260,8 @@ export default function ConversationPage() {
     }
   }, [session]);
 
-  // Monitor API load speed for free Render tier cold start
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (state === "thinking") {
-      timer = setTimeout(() => {
-        setShowSlowServerWarning(true);
-      }, 4000);
-    } else {
-      setShowSlowServerWarning(false);
-    }
-    return () => clearTimeout(timer);
-  }, [state]);
-
   // Text-to-Speech (TTS) synthesizer helper
-  const speakText = useCallback((text: string) => {
+  const speakText = useCallback((text: string, onEndCallback?: () => void) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     window.speechSynthesis.cancel(); // stop any active speech
     setIsPaused(false);
@@ -314,10 +301,12 @@ export default function ConversationPage() {
     utterance.onend = () => {
       setState("idle");
       setIsPaused(false);
+      if (onEndCallback) onEndCallback();
     };
     utterance.onerror = () => {
       setState("idle");
       setIsPaused(false);
+      if (onEndCallback) onEndCallback();
     };
 
     window.speechSynthesis.speak(utterance);
@@ -451,9 +440,38 @@ export default function ConversationPage() {
   const handleMicClick = useCallback(() => {
     if (state === "idle") {
       setIsPaused(false);
+
+      // If we haven't spoken the personalized greeting out loud yet, speak it first!
+      if (!hasSpokenGreeting) {
+        setHasSpokenGreeting(true);
+        const storedName = localStorage.getItem("speakintel-username") || session?.user?.name || "Learner";
+        const firstName = storedName.split(" ")[0];
+        const greetingText = `Hello ${firstName}! I am SpeakIntel AI, your personal English speaking coach. I am ready to help you practice. What would you like to discuss today?`;
+        
+        speakText(greetingText, () => {
+          // Callback fired when greeting finishes speaking: automatically start listening!
+          setState("listening");
+          if (recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              console.warn("Could not start speech recognition, falling back to mock conversation simulation:", e);
+              setTimeout(() => {
+                processInput("I am very excited for join this company because I think it will helping me to growing my career.");
+              }, 2000);
+            }
+          } else {
+            setTimeout(() => {
+              processInput("I am very excited for join this company because I think it will helping me to growing my career.");
+            }, 2000);
+          }
+        });
+        return;
+      }
+
+      // Normal flow: start Speech Recognition immediately
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
-        // Unlock browser speech synthesis autoplay restrictions
         try {
           const unlockUtterance = new SpeechSynthesisUtterance("");
           window.speechSynthesis.speak(unlockUtterance);
@@ -495,7 +513,7 @@ export default function ConversationPage() {
       setIsPaused(false);
       setState("idle");
     }
-  }, [state, processInput]);
+  }, [state, processInput, hasSpokenGreeting, speakText, session]);
 
   const handlePauseToggle = useCallback(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -623,9 +641,7 @@ export default function ConversationPage() {
               : state === "listening"
               ? "I'm listening..."
               : state === "thinking"
-              ? showSlowServerWarning
-                ? "⏳ Waking up the free AI server (this takes ~50 seconds on the first request)..."
-                : "Processing your response..."
+              ? "Processing your response..."
               : "AI Coach is speaking..."}
           </motion.p>
 

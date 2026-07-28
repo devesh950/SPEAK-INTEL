@@ -77,7 +77,7 @@ class AICoach:
     def __init__(self):
         if settings.gemini_api_key:
             genai.configure(api_key=settings.gemini_api_key)
-        self.model = genai.GenerativeModel("gemini-2.0-flash")
+        self.model = genai.GenerativeModel(settings.gemini_model)
     
     async def chat(
         self,

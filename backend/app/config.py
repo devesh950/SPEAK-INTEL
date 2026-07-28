@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     
     # Google Gemini AI
     gemini_api_key: str = ""
+    gemini_model: str = "gemini-1.5-pro"
     
     # Database
     database_url: str = ""

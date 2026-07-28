@@ -348,7 +348,8 @@ export default function ConversationPage() {
         };
 
         setMessages((prev) => [...prev, aiMsg]);
-        speakText(data.response);
+        const speakContent = data.response.split("📝")[0].split("Feedback:")[0].trim();
+        speakText(speakContent);
       } catch (error) {
         console.error("API request failed, fallback to offline AI analysis.", error);
 
@@ -443,38 +444,9 @@ export default function ConversationPage() {
   const handleMicClick = useCallback(() => {
     if (state === "idle") {
       setIsPaused(false);
-
-      // If we haven't spoken the personalized greeting out loud yet, speak it first!
-      if (!hasSpokenGreeting) {
-        setHasSpokenGreeting(true);
-        const storedName = localStorage.getItem("speakintel-username") || session?.user?.name || "Learner";
-        const firstName = storedName.split(" ")[0];
-        const greetingText = `Hello ${firstName}! I am SpeakIntel AI, your personal English speaking coach. I am ready to help you practice. What would you like to discuss today?`;
-        
-        speakText(greetingText, () => {
-          // Callback fired when greeting finishes speaking: automatically start listening!
-          setState("listening");
-          if (recognitionRef.current) {
-            try {
-              recognitionRef.current.start();
-            } catch (e) {
-              console.warn("Could not start speech recognition, falling back to mock conversation simulation:", e);
-              setTimeout(() => {
-                processInput("I am very excited for join this company because I think it will helping me to growing my career.");
-              }, 2000);
-            }
-          } else {
-            setTimeout(() => {
-              processInput("I am very excited for join this company because I think it will helping me to growing my career.");
-            }, 2000);
-          }
-        });
-        return;
-      }
-
-      // Normal flow: start Speech Recognition immediately
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
+        // Unlock browser speech synthesis autoplay restrictions
         try {
           const unlockUtterance = new SpeechSynthesisUtterance("");
           window.speechSynthesis.speak(unlockUtterance);
@@ -516,7 +488,7 @@ export default function ConversationPage() {
       setIsPaused(false);
       setState("idle");
     }
-  }, [state, processInput, hasSpokenGreeting, speakText, session]);
+  }, [state, processInput]);
 
   const handlePauseToggle = useCallback(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;

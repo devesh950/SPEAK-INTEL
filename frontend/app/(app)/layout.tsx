@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   Mic,
@@ -40,9 +41,31 @@ const navItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session, update: updateSession } = useSession();
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authorized, setAuthorized] = useState(false);
+
+  // Profile states
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  
+  // Initialize profile name and avatar
+  const [profileName, setProfileName] = useState("User");
+  const [profileImage, setProfileImage] = useState("");
+
+  const presetAvatars = [
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Leo",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Bella",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Jack",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Sara",
+  ];
+
+  const [editName, setEditName] = useState("");
+  const [editImage, setEditImage] = useState("");
 
   useEffect(() => {
     const cookies = document.cookie.split(";").map((c) => c.trim());
@@ -62,6 +85,61 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, router]);
 
+  // Sync profile details with session or local state
+  useEffect(() => {
+    if (session?.user) {
+      setProfileName(session.user.name || session.user.email?.split("@")[0] || "User");
+      setProfileImage(session.user.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=demo");
+    } else {
+      // Fallback localstorage sync for demo flow
+      const cachedName = localStorage.getItem("speakintel-username") || "Demo User";
+      const cachedImage = localStorage.getItem("speakintel-avatar") || "https://api.dicebear.com/7.x/avataaars/svg?seed=demo";
+      setProfileName(cachedName);
+      setProfileImage(cachedImage);
+    }
+  }, [session]);
+
+  const handleOpenEditProfile = () => {
+    setEditName(profileName);
+    setEditImage(profileImage);
+    setProfileModalOpen(true);
+    setDropdownOpen(false);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName.trim()) return;
+
+    localStorage.setItem("speakintel-username", editName);
+    localStorage.setItem("speakintel-avatar", editImage);
+    setProfileName(editName);
+    setProfileImage(editImage);
+
+    // If NextAuth session is loaded, try updating it dynamically
+    if (session) {
+      try {
+        await updateSession({
+          name: editName,
+          image: editImage,
+        });
+      } catch (err) {
+        console.warn("Session update failed (unsupported in some providers), local state preserved.");
+      }
+    }
+
+    setProfileModalOpen(false);
+  };
+
+  const handleSignOutClick = async () => {
+    // Clear custom bypass cookies
+    document.cookie = "speakintel-demo-session=; path=/; max-age=0";
+    localStorage.removeItem("speakintel-username");
+    localStorage.removeItem("speakintel-avatar");
+    
+    // Call NextAuth signOut
+    await signOut({ callbackUrl: "/sign-in" });
+  };
+
   if (!authorized) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -77,14 +155,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         initial={false}
         animate={{ width: sidebarOpen ? 256 : 72 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 z-40 glass-strong border-r border-border"
+        className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 z-40 border-r border-border glass-strong"
       >
-        {/* Logo */}
+        {/* Header */}
         <div className="flex items-center gap-2 p-4 h-16 border-b border-border">
           <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
             <Mic className="w-5 h-5 text-white" />
           </div>
-          <AnimatePresence>
+          <AnimatePresence initial={false}>
             {sidebarOpen && (
               <motion.span
                 initial={{ opacity: 0, width: 0 }}
@@ -119,22 +197,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   />
                 )}
                 <item.icon className="w-5 h-5 flex-shrink-0" />
-                <AnimatePresence>
-                  {sidebarOpen && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: "auto" }}
-                      exit={{ opacity: 0, width: 0 }}
-                      className="whitespace-nowrap overflow-hidden"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-
-                {/* Tooltip for collapsed */}
+                {sidebarOpen && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="whitespace-nowrap"
+                  >
+                    {item.label}
+                  </motion.span>
+                )}
                 {!sidebarOpen && (
-                  <div className="absolute left-full ml-2 px-2 py-1 rounded-md bg-surface text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  <div className="absolute left-16 bg-popover text-white text-xs px-2.5 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-border">
                     {item.label}
                   </div>
                 )}
@@ -143,34 +216,56 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Collapse Toggle */}
-        <div className="p-3 border-t border-border">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:bg-white/5 hover:text-white transition-all w-full"
-          >
-            <ChevronLeft
-              className={`w-5 h-5 transition-transform ${
-                !sidebarOpen ? "rotate-180" : ""
+        {/* Toggle & User Profile */}
+        <div className="p-3 border-t border-border space-y-2">
+          {sidebarOpen && (
+            <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5">
+              <div 
+                onClick={handleOpenEditProfile}
+                className="w-9 h-9 rounded-full overflow-hidden border border-primary/30 cursor-pointer flex-shrink-0"
+              >
+                {profileImage ? (
+                  <img src={profileImage} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full gradient-primary flex items-center justify-center text-sm font-bold text-white">
+                    {profileName?.[0]?.toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate text-white">{profileName}</p>
+                <p className="text-xs text-muted-foreground truncate">{session?.user?.email || "Demo Learner"}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-1">
+            <button
+              onClick={handleSignOutClick}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-all ${
+                sidebarOpen ? "w-full" : "justify-center w-11"
               }`}
-            />
-            <AnimatePresence>
-              {sidebarOpen && (
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="whitespace-nowrap"
-                >
-                  Collapse
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </button>
+              title="Sign Out"
+            >
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              {sidebarOpen && <span>Sign Out</span>}
+            </button>
+
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2.5 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-white transition-all ml-auto hidden lg:block"
+            >
+              <ChevronLeft
+                className={`w-5 h-5 transition-transform duration-300 ${
+                  !sidebarOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+          </div>
         </div>
       </motion.aside>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Drawer */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -226,8 +321,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 })}
               </nav>
 
-              <div className="p-3 border-t border-border">
-                <button className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-all w-full">
+              <div className="p-3 border-t border-border space-y-3">
+                <div 
+                  onClick={handleOpenEditProfile}
+                  className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5 cursor-pointer"
+                >
+                  <div className="w-9 h-9 rounded-full overflow-hidden border border-primary/30">
+                    <img src={profileImage} alt="Avatar" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate text-white">{profileName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{session?.user?.email || "Demo Learner"}</p>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={handleSignOutClick}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-all w-full"
+                >
                   <LogOut className="w-5 h-5" />
                   Sign Out
                 </button>
@@ -254,23 +365,181 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div className="hidden lg:block" />
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 relative">
             {/* Notifications */}
             <button className="relative p-2 rounded-xl hover:bg-white/5 text-muted-foreground hover:text-white transition-all">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-accent" />
             </button>
 
-            {/* User Avatar */}
-            <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-sm font-bold cursor-pointer">
-              U
+            {/* User Avatar & Dropdown trigger */}
+            <div 
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="w-9 h-9 rounded-full overflow-hidden border-2 border-primary/20 cursor-pointer relative"
+            >
+              {profileImage ? (
+                <img src={profileImage} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full gradient-primary flex items-center justify-center text-sm font-bold text-white">
+                  {profileName?.[0]?.toUpperCase()}
+                </div>
+              )}
             </div>
+
+            {/* Dropdown Menu */}
+            <AnimatePresence>
+              {dropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setDropdownOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-12 w-56 rounded-xl border border-border bg-popover p-2 shadow-xl z-40 text-sm"
+                  >
+                    <div className="p-3 border-b border-border">
+                      <p className="font-semibold text-white truncate">{profileName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{session?.user?.email || "Demo Learner"}</p>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        onClick={handleOpenEditProfile}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-white transition-colors"
+                      >
+                        ✏️ Edit Profile Info
+                      </button>
+                      <Link
+                        href="/settings"
+                        onClick={() => setDropdownOpen(false)}
+                        className="w-full block text-left px-3 py-2 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-white transition-colors"
+                      >
+                        ⚙️ Preferences
+                      </Link>
+                    </div>
+                    <div className="border-t border-border pt-1 mt-1">
+                      <button
+                        onClick={handleSignOutClick}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </header>
 
         {/* Page Content */}
         <main className="p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
+
+      {/* Profile Edit Modal */}
+      <AnimatePresence>
+        {profileModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setProfileModalOpen(false)}
+              className="absolute inset-0 bg-black/70"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 30, scale: 0.95 }}
+              className="relative z-10 w-full max-w-md bg-popover border border-border rounded-2xl p-6 shadow-2xl space-y-6"
+            >
+              <div className="flex items-center justify-between border-b border-border pb-4">
+                <h3 className="text-lg font-bold text-white">Edit Profile Info</h3>
+                <button
+                  onClick={() => setProfileModalOpen(false)}
+                  className="text-muted-foreground hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveProfile} className="space-y-4">
+                {/* Avatar Preview & Selection */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-muted-foreground block">
+                    Choose Profile Avatar
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/40 flex-shrink-0">
+                      <img src={editImage} alt="Edit Avatar" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="grid grid-cols-6 gap-2 flex-1">
+                      {presetAvatars.map((url, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setEditImage(url)}
+                          className={`w-9 h-9 rounded-full overflow-hidden border-2 transition-all hover:scale-105 ${
+                            editImage === url ? "border-primary" : "border-transparent"
+                          }`}
+                        >
+                          <img src={url} alt="Preset" className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Custom Avatar URL */}
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    Custom Avatar Image URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={editImage}
+                    onChange={(e) => setEditImage(e.target.value)}
+                    placeholder="https://example.com/avatar.jpg"
+                    className="w-full px-4 py-2 text-sm rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-primary/50 transition-colors placeholder:text-muted"
+                  />
+                </div>
+
+                {/* Display Name */}
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    Display Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Your Name"
+                    className="w-full px-4 py-2 text-sm rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-primary/50 transition-colors"
+                  />
+                </div>
+
+                <div className="flex gap-3 justify-end pt-4 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => setProfileModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-sm font-medium hover:bg-white/5 text-muted-foreground hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary-light transition-colors"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile Bottom Nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 glass-strong border-t border-border">

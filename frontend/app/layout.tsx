@@ -27,6 +27,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { SessionProvider } from "next-auth/react";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -35,7 +37,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
+        <SessionProvider>
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );

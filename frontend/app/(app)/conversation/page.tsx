@@ -261,13 +261,31 @@ export default function ConversationPage() {
     setIsPaused(false);
 
     const utterance = new SpeechSynthesisUtterance(text);
-    // Select an English speaking voice if available from pre-loaded list
-    const voice = voices.find(
+    
+    // Filter all English voice packages
+    const englishVoices = voices.filter(
       (v) =>
         v.lang.startsWith("en-US") ||
         v.lang.startsWith("en-GB") ||
         v.lang.startsWith("en-")
     );
+
+    // List of standard female voice keywords across Windows, macOS, iOS, and Android
+    const femaleVoiceNames = ["zira", "hazel", "samantha", "sara", "karen", "susan", "google us english", "google uk english female", "female"];
+    
+    let voice = englishVoices.find((v) => {
+      const nameLower = v.name.toLowerCase();
+      return femaleVoiceNames.some((femaleName) => nameLower.includes(femaleName));
+    });
+
+    // Fallbacks if no explicit female voice found
+    if (!voice) {
+      voice = englishVoices.find((v) => v.name.toLowerCase().includes("female"));
+    }
+    if (!voice) {
+      voice = englishVoices[0]; // standard system fallback
+    }
+
     if (voice) utterance.voice = voice;
 
     utterance.onstart = () => {

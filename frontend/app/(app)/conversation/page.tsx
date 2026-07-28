@@ -233,6 +233,27 @@ export default function ConversationPage() {
 
   const recognitionRef = useRef<any>(null);
 
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  // Load initial welcome greeting and pre-load voices to avoid async browser delay
+  useEffect(() => {
+    const welcomeMsg: Message = {
+      id: "welcome-coach",
+      role: "ai",
+      content: "Hello! I am SpeakIntel AI, your personal English speaking coach. I am ready to help you practice. Tap the center microphone to start speaking, or type a message below!",
+      timestamp: new Date(),
+    };
+    setMessages([welcomeMsg]);
+
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      const loadVoices = () => {
+        setVoices(window.speechSynthesis.getVoices());
+      };
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
+
   // Text-to-Speech (TTS) synthesizer helper
   const speakText = useCallback((text: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -240,8 +261,7 @@ export default function ConversationPage() {
     setIsPaused(false);
 
     const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    // Select an English speaking voice if available
+    // Select an English speaking voice if available from pre-loaded list
     const voice = voices.find(
       (v) =>
         v.lang.startsWith("en-US") ||
@@ -264,7 +284,7 @@ export default function ConversationPage() {
     };
 
     window.speechSynthesis.speak(utterance);
-  }, []);
+  }, [voices]);
 
   // Process user text input (both keyboard & voice)
   const processInput = useCallback(

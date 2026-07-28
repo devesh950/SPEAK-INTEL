@@ -43,9 +43,12 @@ type ConversationState = "idle" | "listening" | "thinking" | "speaking";
 // ANIMATED ORB COMPONENT
 // ============================================
 
-function AnimatedOrb({ state }: { state: ConversationState }) {
+function AnimatedOrb({ state, onClick }: { state: ConversationState; onClick?: () => void }) {
   return (
-    <div className="relative flex items-center justify-center">
+    <div 
+      onClick={onClick}
+      className="relative flex items-center justify-center cursor-pointer group"
+    >
       {/* Outer glow rings */}
       <motion.div
         animate={{
@@ -53,7 +56,7 @@ function AnimatedOrb({ state }: { state: ConversationState }) {
           opacity: state === "idle" ? 0.3 : 0.6,
         }}
         transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute w-64 h-64 rounded-full"
+        className="absolute w-64 h-64 rounded-full group-hover:opacity-80 transition-opacity"
         style={{
           background:
             state === "listening"
@@ -81,6 +84,8 @@ function AnimatedOrb({ state }: { state: ConversationState }) {
 
       {/* Main orb */}
       <motion.div
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
         animate={{
           scale:
             state === "listening"
@@ -564,7 +569,7 @@ export default function ConversationPage() {
           </motion.p>
 
           {/* Animated Orb */}
-          <AnimatedOrb state={state} />
+          <AnimatedOrb state={state} onClick={handleMicClick} />
 
           {/* Waveform */}
           <div className="mt-8">

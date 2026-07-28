@@ -16,6 +16,7 @@ import {
   Volume2,
 } from "lucide-react";
 import { sendMessage } from "@/lib/api";
+import { useSession } from "next-auth/react";
 // ============================================
 // TYPES
 // ============================================
@@ -224,23 +225,28 @@ function FeedbackCard({
 // ============================================
 
 export default function ConversationPage() {
+  const { data: session } = useSession();
+
   const [state, setState] = useState<ConversationState>("idle");
   const [messages, setMessages] = useState<Message[]>([]);
   const [showTranscript, setShowTranscript] = useState(false);
   const [inputText, setInputText] = useState("");
   const [isPaused, setIsPaused] = useState(false);
+  const [showSlowServerWarning, setShowSlowServerWarning] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const recognitionRef = useRef<any>(null);
-
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   // Load initial welcome greeting and pre-load voices to avoid async browser delay
   useEffect(() => {
+    const storedName = localStorage.getItem("speakintel-username") || session?.user?.name || "Learner";
+    const firstName = storedName.split(" ")[0];
+
     const welcomeMsg: Message = {
       id: "welcome-coach",
       role: "ai",
-      content: "Hello! I am SpeakIntel AI, your personal English speaking coach. I am ready to help you practice. Tap the center microphone to start speaking, or type a message below!",
+      content: `Hello ${firstName}! I am SpeakIntel AI, your personal English speaking coach. I am ready to help you practice. Tap the center microphone to start speaking, or type a message below!`,
       timestamp: new Date(),
     };
     setMessages([welcomeMsg]);
@@ -252,7 +258,20 @@ export default function ConversationPage() {
       loadVoices();
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
-  }, []);
+  }, [session]);
+
+  // Monitor API load speed for free Render tier cold start
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (state === "thinking") {
+      timer = setTimeout(() => {
+        setShowSlowServerWarning(true);
+      }, 4000);
+    } else {
+      setShowSlowServerWarning(false);
+    }
+    return () => clearTimeout(timer);
+  }, [state]);
 
   // Text-to-Speech (TTS) synthesizer helper
   const speakText = useCallback((text: string) => {
@@ -602,7 +621,9 @@ export default function ConversationPage() {
               : state === "listening"
               ? "I'm listening..."
               : state === "thinking"
-              ? "Processing your response..."
+              ? showSlowServerWarning
+                ? "⏳ Waking up the free AI server (this takes ~50 seconds on the first request)..."
+                : "Processing your response..."
               : "AI Coach is speaking..."}
           </motion.p>
 

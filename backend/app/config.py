@@ -4,6 +4,15 @@ Application configuration using Pydantic Settings.
 
 from pydantic_settings import BaseSettings
 from typing import List
+import os
+
+# Dynamic environment variable fallback mapping for naming mismatches in Render
+if "Gemini_key" in os.environ:
+    os.environ["GEMINI_API_KEY"] = os.environ["Gemini_key"]
+if "Database_url" in os.environ:
+    os.environ["DATABASE_URL"] = os.environ["Database_url"]
+if "nextauth" in os.environ:
+    os.environ["NEXTAUTH_SECRET"] = os.environ["nextauth"]
 
 
 class Settings(BaseSettings):

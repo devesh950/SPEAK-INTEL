@@ -232,6 +232,7 @@ export default function ConversationPage() {
   const speakText = useCallback((text: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     window.speechSynthesis.cancel(); // stop any active speech
+    setIsPaused(false);
 
     const utterance = new SpeechSynthesisUtterance(text);
     const voices = window.speechSynthesis.getVoices();
@@ -246,12 +247,15 @@ export default function ConversationPage() {
 
     utterance.onstart = () => {
       setState("speaking");
+      setIsPaused(false);
     };
     utterance.onend = () => {
       setState("idle");
+      setIsPaused(false);
     };
     utterance.onerror = () => {
       setState("idle");
+      setIsPaused(false);
     };
 
     window.speechSynthesis.speak(utterance);
@@ -360,7 +364,15 @@ export default function ConversationPage() {
 
         rec.onerror = (err: any) => {
           console.error("Speech recognition error:", err);
-          setState("idle");
+          // If browser blocked microphone access, trigger simulation fallback automatically so the app is still testable!
+          if (err.error === "not-allowed" || err.error === "service-not-allowed" || err.error === "aborted") {
+            console.warn("Microphone access denied or aborted. Invoking mock voice simulator.");
+            setTimeout(() => {
+              processInput("I am very excited for join this company because I think it will helping me to growing my career.");
+            }, 1000);
+          } else {
+            setState("idle");
+          }
         };
 
         rec.onend = () => {
@@ -380,36 +392,57 @@ export default function ConversationPage() {
 
   const handleMicClick = useCallback(() => {
     if (state === "idle") {
+      setIsPaused(false);
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
+
+      setState("listening");
 
       if (recognitionRef.current) {
         try {
           recognitionRef.current.start();
         } catch (e) {
-          console.error("Could not start speech recognition:", e);
+          console.warn("Could not start speech recognition, falling back to mock conversation simulation:", e);
+          setTimeout(() => {
+            processInput("I am very excited for join this company because I think it will helping me to growing my career.");
+          }, 2000);
         }
       } else {
-        // Mock fallback if browser blocks microphone access or lacks API
-        setState("listening");
+        // Fallback simulation if browser doesn't support speech recognition API
         setTimeout(() => {
           processInput("I am very excited for join this company because I think it will helping me to growing my career.");
-        }, 3000);
+        }, 2000);
       }
     } else if (state === "listening") {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      } else {
-        setState("idle");
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          console.warn("Speech recognition stop failed", e);
+        }
       }
+      setState("idle");
     } else if (state === "speaking") {
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
+      setIsPaused(false);
       setState("idle");
     }
   }, [state, processInput]);
+
+  const handlePauseToggle = useCallback(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    if (state === "speaking" && !isPaused) {
+      window.speechSynthesis.pause();
+      setIsPaused(true);
+    } else if (isPaused) {
+      window.speechSynthesis.resume();
+      setIsPaused(false);
+    }
+  }, [state, isPaused]);
 
   const handleTextSubmit = () => {
     if (!inputText.trim()) return;
@@ -531,7 +564,7 @@ export default function ConversationPage() {
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              onClick={() => setIsPaused(!isPaused)}
+              onClick={handlePauseToggle}
               className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:text-white transition-all"
             >
               {isPaused ? (

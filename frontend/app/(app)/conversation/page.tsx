@@ -540,6 +540,8 @@ export default function ConversationPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const latestAIMessage = [...messages].reverse().find((m) => m.role === "ai");
+
   return (
     <div className="relative w-full min-h-[calc(100vh-8.5rem)] bg-background/25 rounded-3xl border border-border/60 flex flex-col overflow-hidden shadow-2xl z-10">
       {/* Background gradient */}
@@ -634,6 +636,30 @@ export default function ConversationPage() {
           <div className="mt-8">
             <Waveform active={state === "listening" || state === "speaking"} />
           </div>
+
+          {/* Latest Response Card */}
+          {latestAIMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 max-w-sm sm:max-w-md mx-auto p-4 rounded-2xl bg-white/5 border border-white/10 text-center relative z-10"
+            >
+              <p className="text-sm text-white/90 font-medium leading-relaxed">
+                {latestAIMessage.content.split("📝")[0].trim()}
+              </p>
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  speakText(latestAIMessage.content.split("📝")[0].trim());
+                }}
+                className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 text-xs text-primary-light transition-all cursor-pointer border border-primary/20"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                Listen Again
+              </button>
+            </motion.div>
+          )}
 
           {/* Controls */}
           <div className="mt-12 flex items-center gap-6">

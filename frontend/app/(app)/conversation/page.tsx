@@ -466,13 +466,13 @@ export default function ConversationPage() {
   }, [messages]);
 
   return (
-    <div className="fixed inset-0 bg-background z-20 flex flex-col">
+    <div className="relative w-full min-h-[calc(100vh-8.5rem)] bg-background/25 rounded-3xl border border-border/60 flex flex-col overflow-hidden shadow-2xl z-10">
       {/* Background gradient */}
-      <div className="absolute inset-0 gradient-hero opacity-50" />
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-primary/5 blur-[200px]" />
+      <div className="absolute inset-0 gradient-hero opacity-30 pointer-events-none" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-primary/5 blur-[200px] pointer-events-none" />
 
       {/* Top Bar */}
-      <div className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4 glass-strong border-b border-border">
+      <div className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-3.5 glass-strong border-b border-border/60">
         <div className="flex items-center gap-3">
           <a href="/dashboard" className="text-muted-foreground hover:text-white transition-colors">
             <X className="w-5 h-5" />

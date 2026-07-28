@@ -25,7 +25,11 @@ class Settings(BaseSettings):
     
     
     # CORS
-    cors_origins: List[str] = ["http://localhost:3000"]
+    cors_origins: List[str] = [
+        "http://localhost:3000",
+        "https://speak-intel.vercel.app",
+        "https://speakintel.vercel.app"
+    ]
     
     # Auth
     nextauth_secret: str = ""

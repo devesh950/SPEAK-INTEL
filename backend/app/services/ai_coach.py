@@ -119,18 +119,37 @@ class AICoach:
         # Add level context
         system_prompt += f"\n\nUser's English level: {level}"
         
-        # Build chat history for Gemini
-        chat = self.model.start_chat(history=[
-            {"role": msg["role"], "parts": [msg["content"]]}
-            for msg in conversation_history
-        ])
-        
-        try:
-            # Generate response
-            response = chat.send_message(user_message)
-            response_text = response.text
-        except Exception as e:
-            print(f"Gemini API call failed: {e}. Utilizing smart offline fallback.")
+        # Multi-model fallback sequence to handle model deprecations & quota limits
+        models_to_try = [
+            settings.gemini_model,
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-exp",
+            "gemini-1.5-flash-latest",
+            "gemini-1.5-pro-latest",
+            "gemini-pro"
+        ]
+
+        response_text = None
+        last_error = None
+
+        for model_name in models_to_try:
+            try:
+                model_instance = genai.GenerativeModel(model_name)
+                chat = model_instance.start_chat(history=[
+                    {"role": msg["role"], "parts": [msg["content"]]}
+                    for msg in conversation_history
+                ])
+                response = chat.send_message(user_message)
+                response_text = response.text
+                print(f"Successfully generated response using model: {model_name}")
+                break
+            except Exception as e:
+                print(f"Model {model_name} failed: {e}")
+                last_error = e
+
+        if not response_text:
+            e = last_error
+            print(f"All Gemini models failed. Utilizing smart offline fallback. Last error: {e}")
             
             corrected = user_message
             explanation = "Your sentence is structurally correct! Well done."

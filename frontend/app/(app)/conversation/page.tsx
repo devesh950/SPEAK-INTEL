@@ -414,14 +414,8 @@ export default function ConversationPage() {
         const encodedText = encodeURIComponent(textToSpeak);
         const url = `${API_BASE_URL}/api/conversations/tts?text=${encodedText}`;
         
-        let audio = activeAudioRef.current;
-        if (!audio) {
-          audio = new Audio(url);
-          activeAudioRef.current = audio;
-        } else {
-          audio.src = url;
-          audio.load();
-        }
+        const audio = new Audio(url);
+        activeAudioRef.current = audio;
         
         audio.onplay = () => {
           setIsPaused(false);
@@ -653,13 +647,8 @@ export default function ConversationPage() {
   const handleMicClick = useCallback(() => {
     if (state === "idle") {
       setIsPaused(false);
-      // Pre-activate Audio player channel inside user gesture handler to bypass browser blocks
-      try {
-        const audio = new Audio(`${API_BASE_URL}/api/conversations/tts?text=.`);
-        audio.play().catch(() => {});
-        activeAudioRef.current = audio;
-      } catch (e) {
-        console.warn("Failed to pre-activate cloud audio:", e);
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
 
       setState("listening");
@@ -739,15 +728,7 @@ export default function ConversationPage() {
     const text = inputText;
     setInputText("");
 
-    if (typeof window !== "undefined") {
-      // Pre-activate Audio player channel during submit gesture
-      try {
-        const audio = new Audio(`${API_BASE_URL}/api/conversations/tts?text=.`);
-        audio.play().catch(() => {});
-        activeAudioRef.current = audio;
-      } catch (e) {}
-    }
-
+    // Process input directly without pre-activation
     processInput(text);
   };
 

@@ -357,10 +357,17 @@ export default function ConversationPage() {
 
       const textToSpeak = chunks[chunkIndex].trim();
 
+      // Unified 7-second safety fallback timeout. If ANY path hangs (cloud or system), recover and skip!
+      fallbackTimeout = setTimeout(() => {
+        console.warn("TTS safety timeout triggered. Skipping stuck chunk.");
+        chunkIndex++;
+        speakNextChunk();
+      }, 7000);
+
       if (voiceEngine === "cloud") {
-        // Use HTML5 audio player (Google Translate TTS endpoint)
+        // Use Youdao English TTS (highly reliable, no referrer or CORS blocks)
         const encodedText = encodeURIComponent(textToSpeak);
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${encodedText}`;
+        const url = `https://dict.youdao.com/dictvoice?type=0&audio=${encodedText}`;
         const audio = new Audio(url);
         activeAudioRef.current = audio;
         
@@ -368,15 +375,18 @@ export default function ConversationPage() {
           setIsPaused(false);
         };
         audio.onended = () => {
+          if (fallbackTimeout) clearTimeout(fallbackTimeout);
           chunkIndex++;
           speakNextChunk();
         };
         audio.onerror = () => {
-          console.warn("Cloud HTML5 TTS failed, falling back to system speech");
+          console.warn("Cloud HTML5 TTS failed, trying system speech fallback...");
+          if (fallbackTimeout) clearTimeout(fallbackTimeout);
           speakSystemChunk(textToSpeak);
         };
         audio.play().catch((err) => {
-          console.warn("Cloud HTML5 play block/failed, falling back to system speech:", err);
+          console.warn("Cloud HTML5 play blocked/failed, trying system speech fallback:", err);
+          if (fallbackTimeout) clearTimeout(fallbackTimeout);
           speakSystemChunk(textToSpeak);
         });
       } else {
@@ -395,13 +405,6 @@ export default function ConversationPage() {
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
 
-      // Set a 6-second safety timeout. If the chunk hangs or doesn't speak, move on.
-      fallbackTimeout = setTimeout(() => {
-        console.warn("TTS chunk timeout. Skipping stuck chunk.");
-        chunkIndex++;
-        speakNextChunk();
-      }, 6000);
-
       utterance.onstart = () => {
         setIsPaused(false);
       };
@@ -416,7 +419,7 @@ export default function ConversationPage() {
         if (errType !== "interrupted" && errType !== "canceled") {
           console.warn("Speech synthesis failed, trying Cloud fallback...");
           const encodedText = encodeURIComponent(textToSpeak);
-          const fallbackUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${encodedText}`;
+          const fallbackUrl = `https://dict.youdao.com/dictvoice?type=0&audio=${encodedText}`;
           const audio = new Audio(fallbackUrl);
           activeAudioRef.current = audio;
           audio.onended = () => {

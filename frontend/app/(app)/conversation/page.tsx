@@ -402,12 +402,12 @@ export default function ConversationPage() {
 
       const textToSpeak = chunks[chunkIndex].trim();
 
-      // Unified 7-second safety fallback timeout. If ANY path hangs (cloud or system), recover and skip!
+      // Unified 4.5-second safety fallback timeout. If ANY path hangs (cloud or system), recover and skip!
       fallbackTimeout = setTimeout(() => {
         console.warn("TTS safety timeout triggered. Skipping stuck chunk.");
         chunkIndex++;
         speakNextChunk();
-      }, 7000);
+      }, 4500);
 
       if (voiceEngine === "cloud") {
         // Use custom backend edge-tts proxy (highly reliable, clean MP3 stream, no blocks)
@@ -655,7 +655,7 @@ export default function ConversationPage() {
       setIsPaused(false);
       // Pre-activate Audio player channel inside user gesture handler to bypass browser blocks
       try {
-        const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAAD");
+        const audio = new Audio(`${API_BASE_URL}/api/conversations/tts?text=.`);
         audio.play().catch(() => {});
         activeAudioRef.current = audio;
       } catch (e) {
@@ -742,7 +742,7 @@ export default function ConversationPage() {
     if (typeof window !== "undefined") {
       // Pre-activate Audio player channel during submit gesture
       try {
-        const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAAD");
+        const audio = new Audio(`${API_BASE_URL}/api/conversations/tts?text=.`);
         audio.play().catch(() => {});
         activeAudioRef.current = audio;
       } catch (e) {}

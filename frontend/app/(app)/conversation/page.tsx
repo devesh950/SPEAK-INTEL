@@ -442,11 +442,19 @@ export default function ConversationPage() {
 
         rec.onerror = (err: any) => {
           console.error("Speech recognition error:", err);
-          // Fallback to simulator on any error (blocked mic, no speech, network timeout) so user can test the app
-          console.warn("Speech recognition failed. Triggering simulator fallback.");
-          setTimeout(() => {
-            processInput("I am very excited for join this company because I think it will helping me to growing my career.");
-          }, 1000);
+          setState("idle");
+          // Notify the user rather than typing simulated sentences
+          const errorContent = err.error === "no-speech"
+            ? "I didn't catch that. Please click the microphone again and speak clearly!"
+            : "Could not access microphone. Please check permissions or type below.";
+          
+          const errorMsg: Message = {
+            id: "err-" + Date.now(),
+            role: "ai",
+            content: errorContent,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, errorMsg]);
         };
 
         rec.onend = () => {
@@ -484,16 +492,25 @@ export default function ConversationPage() {
         try {
           recognitionRef.current.start();
         } catch (e) {
-          console.warn("Could not start speech recognition, falling back to mock conversation simulation:", e);
-          setTimeout(() => {
-            processInput("I am very excited for join this company because I think it will helping me to growing my career.");
-          }, 2000);
+          console.warn("Could not start speech recognition:", e);
+          const errorMsg: Message = {
+            id: "err-" + Date.now(),
+            role: "ai",
+            content: "Could not start speech recognition. Please check your microphone connection or type your message below.",
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, errorMsg]);
+          setState("idle");
         }
       } else {
-        // Fallback simulation if browser doesn't support speech recognition API
-        setTimeout(() => {
-          processInput("I am very excited for join this company because I think it will helping me to growing my career.");
-        }, 2000);
+        const errorMsg: Message = {
+          id: "err-" + Date.now(),
+          role: "ai",
+          content: "Speech recognition is not supported in this browser. Please type your message in the box below!",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+        setState("idle");
       }
     } else if (state === "listening") {
       if (recognitionRef.current) {

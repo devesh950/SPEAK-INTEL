@@ -266,13 +266,16 @@ export default function ConversationPage() {
   }, [state]);
 
   const startListening = useCallback(() => {
-    setState("listening");
     if (recognitionRef.current) {
       try {
         recognitionRef.current.start();
+        setState("listening");
       } catch (e) {
         console.warn("Could not start speech recognition:", e);
+        setState("idle");
       }
+    } else {
+      setState("idle");
     }
   }, []);
 

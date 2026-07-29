@@ -15,7 +15,7 @@ import {
   Sparkles,
   Volume2,
 } from "lucide-react";
-import { sendMessage } from "@/lib/api";
+import { sendMessage, API_BASE_URL } from "@/lib/api";
 import { useSession } from "next-auth/react";
 // ============================================
 // TYPES
@@ -308,7 +308,8 @@ export default function ConversationPage() {
   const testCloudVoice = () => {
     setDiagnosticLog("Initializing Cloud Audio...");
     try {
-      const audio = new Audio("https://dict.youdao.com/dictvoice?type=0&audio=Testing%20cloud%20audio%20output");
+      const encodedText = encodeURIComponent("Testing cloud audio output");
+      const audio = new Audio(`${API_BASE_URL}/api/conversations/tts?text=${encodedText}`);
       activeAudioRef.current = audio;
       
       audio.onplay = () => setDiagnosticLog("Cloud Audio: Started playing...");
@@ -409,9 +410,9 @@ export default function ConversationPage() {
       }, 7000);
 
       if (voiceEngine === "cloud") {
-        // Use Youdao English TTS (highly reliable, no referrer or CORS blocks)
+        // Use custom backend edge-tts proxy (highly reliable, clean MP3 stream, no blocks)
         const encodedText = encodeURIComponent(textToSpeak);
-        const url = `https://dict.youdao.com/dictvoice?type=0&audio=${encodedText}`;
+        const url = `${API_BASE_URL}/api/conversations/tts?text=${encodedText}`;
         const audio = new Audio(url);
         activeAudioRef.current = audio;
         
@@ -461,9 +462,8 @@ export default function ConversationPage() {
         console.warn("TTS chunk error:", e);
         const errType = e.error || "unknown";
         if (errType !== "interrupted" && errType !== "canceled") {
-          console.warn("Speech synthesis failed, trying Cloud fallback...");
           const encodedText = encodeURIComponent(textToSpeak);
-          const fallbackUrl = `https://dict.youdao.com/dictvoice?type=0&audio=${encodedText}`;
+          const fallbackUrl = `${API_BASE_URL}/api/conversations/tts?text=${encodedText}`;
           const audio = new Audio(fallbackUrl);
           activeAudioRef.current = audio;
           audio.onended = () => {

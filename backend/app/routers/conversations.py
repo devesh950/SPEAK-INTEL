@@ -7,7 +7,33 @@ from app.services.ai_coach import ai_coach
 from app.config import settings
 import httpx
 
+from fastapi.responses import StreamingResponse
+import edge_tts
+import io
+
 router = APIRouter()
+
+
+@router.get("/tts")
+async def tts(text: str, voice: str = "en-US-EmmaNeural"):
+    """
+    Generate and stream Text-to-Speech audio using Microsoft Edge's Neural TTS.
+    Bypasses all client-side blocks and CORS limitations.
+    """
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="Text parameter cannot be empty")
+    
+    try:
+        communicate = edge_tts.Communicate(text, voice)
+        
+        async def audio_generator():
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    yield chunk["data"]
+                    
+        return StreamingResponse(audio_generator(), media_type="audio/mpeg")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TTS generation failed: {str(e)}")
 
 
 @router.get("/debug-api")

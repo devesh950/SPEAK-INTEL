@@ -559,7 +559,7 @@ export default function ConversationPage() {
   const latestAIMessage = [...messages].reverse().find((m) => m.role === "ai");
 
   return (
-    <div className="relative w-full min-h-[calc(100vh-8.5rem)] bg-background/25 rounded-3xl border border-border/60 flex flex-col overflow-hidden shadow-2xl z-10">
+    <div className="relative w-full min-h-[calc(100vh-8.5rem)] bg-background/25 rounded-3xl border border-border/60 flex flex-col overflow-y-auto md:overflow-hidden shadow-2xl z-10">
       {/* Background gradient */}
       <div className="absolute inset-0 gradient-hero opacity-30 pointer-events-none" />
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-primary/5 blur-[200px] pointer-events-none" />
@@ -630,7 +630,7 @@ export default function ConversationPage() {
             key={state}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-sm text-muted-foreground mb-8"
+            className="text-sm text-muted-foreground mb-3"
           >
             {state === "idle" && messages.length === 0
               ? "Tap the microphone to begin"
@@ -647,7 +647,7 @@ export default function ConversationPage() {
           <AnimatedOrb state={state} onClick={handleMicClick} />
 
           {/* Waveform */}
-          <div className="mt-8">
+          <div className="mt-3">
             <Waveform active={state === "listening" || state === "speaking"} />
           </div>
 
@@ -656,7 +656,7 @@ export default function ConversationPage() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6 max-w-sm sm:max-w-md mx-auto p-4 rounded-2xl bg-white/5 border border-white/10 text-center relative z-10"
+              className="mt-3 max-w-sm sm:max-w-md mx-auto p-4 rounded-2xl bg-white/5 border border-white/10 text-center relative z-10"
             >
               <p className="text-sm text-white/90 font-medium leading-relaxed">
                 {latestAIMessage.content.split("📝")[0].trim()}
@@ -676,7 +676,7 @@ export default function ConversationPage() {
           )}
 
           {/* Controls */}
-          <div className="mt-12 flex items-center gap-6">
+          <div className="mt-4 flex items-center gap-6">
             {/* Pause/Resume */}
             <motion.button
               whileHover={{ scale: 1.1 }}
@@ -721,7 +721,7 @@ export default function ConversationPage() {
           </div>
 
           {/* Text Input */}
-          <div className="mt-8 w-full max-w-md px-4">
+          <div className="mt-4 w-full max-w-md px-4">
             <div className="flex items-center gap-2 glass rounded-xl px-4 py-2">
               <input
                 type="text"

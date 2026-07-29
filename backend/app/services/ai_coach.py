@@ -1,9 +1,13 @@
 """
-AI Coach Service - Google Gemini Integration
+AI Coach Service - Google Gemini Integration (REST API)
 Handles conversation, grammar correction, vocabulary analysis, and scoring.
+Uses httpx REST calls instead of the google-generativeai SDK to ensure
+full compatibility with all API key formats (including AQ. prefix keys).
 """
 
-import google.generativeai as genai
+import httpx
+import json
+import re
 from typing import Optional
 from app.config import settings
 
@@ -70,15 +74,105 @@ ROLEPLAY_PROMPTS = {
     "tourist": "You are a foreign tourist asking for help. Speak with slight language difficulties.",
 }
 
+# Models to try in order, with both v1beta and v1 API versions
+MODELS_TO_TRY = [
+    ("v1beta", "gemini-2.0-flash"),
+    ("v1", "gemini-2.0-flash"),
+    ("v1beta", "gemini-2.0-flash-exp"),
+    ("v1beta", "gemini-1.5-flash-latest"),
+    ("v1", "gemini-1.5-flash-latest"),
+    ("v1beta", "gemini-1.5-pro-latest"),
+    ("v1", "gemini-1.5-pro-latest"),
+    ("v1beta", "gemini-pro"),
+    ("v1", "gemini-pro"),
+]
+
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com"
+
 
 class AICoach:
-    """AI Communication Coach powered by Google Gemini."""
+    """AI Communication Coach powered by Google Gemini (REST API)."""
     
     def __init__(self):
-        if settings.gemini_api_key:
-            genai.configure(api_key=settings.gemini_api_key)
-        self.model = genai.GenerativeModel(settings.gemini_model)
+        self.api_key = settings.gemini_api_key
+        print(f"[AICoach] Initialized with API key: {'***' + self.api_key[-6:] if len(self.api_key) > 6 else '(empty)'}")
     
+    async def _call_gemini_rest(self, system_prompt: str, user_message: str, conversation_history: list[dict]) -> Optional[str]:
+        """
+        Call the Gemini REST API directly using httpx.
+        Tries multiple models and API versions for maximum compatibility.
+        Returns the response text or None if all attempts fail.
+        """
+        if not self.api_key:
+            print("[AICoach] No API key configured, skipping REST call")
+            return None
+
+        # Build the contents array for the API request
+        contents = []
+        
+        # Add conversation history
+        for msg in conversation_history:
+            contents.append({
+                "role": msg["role"],
+                "parts": [{"text": msg["content"]}]
+            })
+        
+        # Add the current user message
+        contents.append({
+            "role": "user",
+            "parts": [{"text": user_message}]
+        })
+
+        last_error = None
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for api_version, model_name in MODELS_TO_TRY:
+                url = f"{GEMINI_BASE_URL}/{api_version}/models/{model_name}:generateContent"
+                
+                payload = {
+                    "contents": contents,
+                    "systemInstruction": {
+                        "parts": [{"text": system_prompt}]
+                    },
+                    "generationConfig": {
+                        "temperature": 0.7,
+                        "maxOutputTokens": 1024,
+                    }
+                }
+
+                headers = {
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": self.api_key,
+                }
+
+                try:
+                    print(f"[AICoach] Trying {api_version}/{model_name}...")
+                    response = await client.post(url, json=payload, headers=headers)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        # Extract text from the response
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            if parts:
+                                text = parts[0].get("text", "")
+                                if text:
+                                    print(f"[AICoach] SUCCESS with {api_version}/{model_name}")
+                                    return text
+                    
+                    # Log the error and try next model
+                    error_body = response.text[:300]
+                    print(f"[AICoach] {api_version}/{model_name} returned {response.status_code}: {error_body}")
+                    last_error = f"{response.status_code}: {error_body}"
+                    
+                except Exception as e:
+                    print(f"[AICoach] {api_version}/{model_name} exception: {e}")
+                    last_error = str(e)
+
+        print(f"[AICoach] All models failed. Last error: {last_error}")
+        return None
+
     async def chat(
         self,
         user_message: str,
@@ -89,24 +183,6 @@ class AICoach:
     ) -> dict:
         """
         Process a user message and return AI coach response with feedback.
-        
-        Returns:
-            {
-                "response": "AI conversational response",
-                "feedback": {
-                    "original": "what user said",
-                    "corrected": "improved version",
-                    "explanation": "why it's better",
-                },
-                "scores": {
-                    "grammar": 8,
-                    "fluency": 7,
-                    "vocabulary": 6,
-                    "confidence": 7,
-                    "pronunciation": 0,  # Can't evaluate from text
-                    "overall": 7,
-                },
-            }
         """
         # Select system prompt based on mode
         if mode == "interview" and role:
@@ -119,38 +195,11 @@ class AICoach:
         # Add level context
         system_prompt += f"\n\nUser's English level: {level}"
         
-        # Multi-model fallback sequence to handle model deprecations & quota limits
-        models_to_try = [
-            settings.gemini_model,
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-exp",
-            "gemini-1.5-flash-latest",
-            "gemini-1.5-pro-latest",
-            "gemini-pro"
-        ]
-
-        response_text = None
-        last_error = None
-
-        for model_name in models_to_try:
-            try:
-                model_instance = genai.GenerativeModel(model_name)
-                chat = model_instance.start_chat(history=[
-                    {"role": msg["role"], "parts": [msg["content"]]}
-                    for msg in conversation_history
-                ])
-                response = chat.send_message(user_message)
-                response_text = response.text
-                print(f"Successfully generated response using model: {model_name}")
-                break
-            except Exception as e:
-                print(f"Model {model_name} failed: {e}")
-                last_error = e
+        # Try the REST API
+        response_text = await self._call_gemini_rest(system_prompt, user_message, conversation_history)
 
         if not response_text:
-            e = last_error
-            print(f"All Gemini models failed. Utilizing smart offline fallback. Last error: {e}")
-            
+            # Smart offline fallback
             corrected = user_message
             explanation = "Your sentence is structurally correct! Well done."
             grammar_score = 9
@@ -166,11 +215,11 @@ class AICoach:
                 grammar_score = 5
 
             if corrected != user_message:
-                response_text = f"I heard you! Here is a tip to sound more natural: instead of saying \"{user_message}\", you should say \"{corrected}\".\n\n📝 **Feedback:**\n- **You said:** \"{user_message}\"\n- **Better version:** \"{corrected}\"\n- **Why:** {explanation} (API Error: {str(e)})\n- **Score:** Grammar: {grammar_score}/10 | Fluency: 7/10 | Vocabulary: 6/10"
+                response_text = f'I heard you! Here is a tip to sound more natural: instead of saying "{user_message}", you should say "{corrected}".\n\n📝 **Feedback:**\n- **You said:** "{user_message}"\n- **Better version:** "{corrected}"\n- **Why:** {explanation}\n- **Score:** Grammar: {grammar_score}/10 | Fluency: 7/10 | Vocabulary: 6/10'
             else:
-                response_text = f"That is a very clear explanation! Keep practicing to build confidence. Can you tell me more about your thoughts?\n\n📝 **Feedback:**\n- **You said:** \"{user_message}\"\n- **Better version:** \"{user_message}\"\n- **Why:** {explanation} (API Error: {str(e)})\n- **Score:** Grammar: 9/10 | Fluency: 8/10 | Vocabulary: 8/10"
+                response_text = f'That is a very clear explanation! Keep practicing to build confidence. Can you tell me more about your thoughts?\n\n📝 **Feedback:**\n- **You said:** "{user_message}"\n- **Better version:** "{user_message}"\n- **Why:** {explanation}\n- **Score:** Grammar: 9/10 | Fluency: 8/10 | Vocabulary: 8/10'
         
-        # Parse scores from response (basic extraction)
+        # Parse scores from response
         scores = self._extract_scores(response_text)
         
         return {
@@ -189,8 +238,8 @@ Text: "{text}"
 
 Return ONLY valid JSON, no other text."""
         
-        response = self.model.generate_content(prompt)
-        return {"analysis": response.text}
+        result = await self._call_gemini_rest("You are a grammar analysis engine.", prompt, [])
+        return {"analysis": result or '{"errors": [], "score": 7, "summary": "Analysis unavailable"}'}
     
     async def analyze_vocabulary(self, word: str) -> dict:
         """Get vocabulary analysis for a word."""
@@ -206,12 +255,11 @@ Return ONLY valid JSON, no other text."""
 
 Return ONLY valid JSON, no other text."""
         
-        response = self.model.generate_content(prompt)
-        return {"analysis": response.text}
+        result = await self._call_gemini_rest("You are a vocabulary analysis engine.", prompt, [])
+        return {"analysis": result or '{"word": "' + word + '", "meaning": "Analysis unavailable"}'}
     
     def _extract_scores(self, response_text: str) -> dict:
         """Extract scores from AI response text."""
-        import re
         scores = {
             "grammar": 7,
             "fluency": 7,

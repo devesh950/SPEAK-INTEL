@@ -289,23 +289,26 @@ export default function ConversationPage() {
     setIsPaused(false);
     setState("speaking");
 
-    // Find the best voice
+    // Find the best voice (prioritize local offline voices to prevent silent remote server errors)
     const englishVoices = voices.filter(
       (v) =>
         v.lang.startsWith("en-US") ||
         v.lang.startsWith("en-GB") ||
         v.lang.startsWith("en-")
     );
+    const localEnglishVoices = englishVoices.filter((v) => v.localService !== false);
+    const candidateVoices = localEnglishVoices.length > 0 ? localEnglishVoices : englishVoices;
+
     const femaleVoiceNames = ["zira", "hazel", "samantha", "sara", "karen", "susan", "google us english", "google uk english female", "female"];
-    let selectedVoice = englishVoices.find((v) => {
+    let selectedVoice = candidateVoices.find((v) => {
       const nameLower = v.name.toLowerCase();
       return femaleVoiceNames.some((femaleName) => nameLower.includes(femaleName));
     });
     if (!selectedVoice) {
-      selectedVoice = englishVoices.find((v) => v.name.toLowerCase().includes("female"));
+      selectedVoice = candidateVoices.find((v) => v.name.toLowerCase().includes("female"));
     }
     if (!selectedVoice) {
-      selectedVoice = englishVoices[0];
+      selectedVoice = candidateVoices[0];
     }
 
     // Chrome TTS silently fails on long text (>200 chars). Split into sentences.
@@ -721,16 +724,33 @@ export default function ConversationPage() {
                 {latestAIMessage.content.split("📝")[0].trim()}
               </p>
               
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  speakText(latestAIMessage.content.split("📝")[0].trim());
-                }}
-                className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 text-xs text-primary-light transition-all cursor-pointer border border-primary/20"
-              >
-                <Volume2 className="w-3.5 h-3.5" />
-                Listen Again
-              </button>
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    speakText(latestAIMessage.content.split("📝")[0].trim());
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 text-xs text-primary-light transition-all cursor-pointer border border-primary/20"
+                >
+                  <Volume2 className="w-3.5 h-3.5" />
+                  Listen Again
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (typeof window !== "undefined" && window.speechSynthesis) {
+                      window.speechSynthesis.cancel();
+                      window.speechSynthesis.resume();
+                      const testUtterance = new SpeechSynthesisUtterance("Testing speech synthesis audio output");
+                      window.speechSynthesis.speak(testUtterance);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-xs text-muted-foreground transition-all cursor-pointer border border-white/10"
+                >
+                  Test Sound
+                </button>
+              </div>
             </motion.div>
           )}
 

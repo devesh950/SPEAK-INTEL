@@ -237,6 +237,8 @@ export default function ConversationPage() {
 
   const recognitionRef = useRef<any>(null);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [voiceEngine, setVoiceEngine] = useState<"system" | "cloud">("system");
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Load initial welcome greeting and pre-load voices to avoid async browser delay
   useEffect(() => {
@@ -281,21 +283,34 @@ export default function ConversationPage() {
 
   // Text-to-Speech (TTS) synthesizer helper
   const speakText = useCallback((text: string, onEndCallback?: () => void) => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    if (typeof window === "undefined") return;
     
-    // Stop active speech and unconditionally resume to clear any locked Chrome queue
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.resume();
+    // Stop any active Web Speech synthesis
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
+    }
+    
+    // Stop any active HTML5 audio playback
+    if (activeAudioRef.current) {
+      try {
+        activeAudioRef.current.pause();
+      } catch (e) {
+        console.warn("Pause activeAudio failed:", e);
+      }
+      activeAudioRef.current = null;
+    }
+    
     setIsPaused(false);
     setState("speaking");
 
     // Find the best voice (prioritize local offline voices to prevent silent remote server errors)
-    const englishVoices = voices.filter(
+    const englishVoices = voices ? voices.filter(
       (v) =>
         v.lang.startsWith("en-US") ||
         v.lang.startsWith("en-GB") ||
         v.lang.startsWith("en-")
-    );
+    ) : [];
     const localEnglishVoices = englishVoices.filter((v) => v.localService !== false);
     const candidateVoices = localEnglishVoices.length > 0 ? localEnglishVoices : englishVoices;
 
@@ -328,6 +343,9 @@ export default function ConversationPage() {
       if (fallbackTimeout) clearTimeout(fallbackTimeout);
 
       if (stateRef.current !== "speaking") {
+        if (activeAudioRef.current) {
+          activeAudioRef.current.pause();
+        }
         return; // manually stopped, abort speaking sequence
       }
       if (chunkIndex >= chunks.length) {
@@ -336,7 +354,43 @@ export default function ConversationPage() {
         if (onEndCallback) onEndCallback();
         return;
       }
-      const utterance = new SpeechSynthesisUtterance(chunks[chunkIndex].trim());
+
+      const textToSpeak = chunks[chunkIndex].trim();
+
+      if (voiceEngine === "cloud") {
+        // Use HTML5 audio player (Google Translate TTS endpoint)
+        const encodedText = encodeURIComponent(textToSpeak);
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${encodedText}`;
+        const audio = new Audio(url);
+        activeAudioRef.current = audio;
+        
+        audio.onplay = () => {
+          setIsPaused(false);
+        };
+        audio.onended = () => {
+          chunkIndex++;
+          speakNextChunk();
+        };
+        audio.onerror = () => {
+          console.warn("Cloud HTML5 TTS failed, falling back to system speech");
+          speakSystemChunk(textToSpeak);
+        };
+        audio.play().catch((err) => {
+          console.warn("Cloud HTML5 play block/failed, falling back to system speech:", err);
+          speakSystemChunk(textToSpeak);
+        });
+      } else {
+        speakSystemChunk(textToSpeak);
+      }
+    };
+
+    const speakSystemChunk = (textToSpeak: string) => {
+      if (!window.speechSynthesis) {
+        chunkIndex++;
+        speakNextChunk();
+        return;
+      }
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
       if (selectedVoice) utterance.voice = selectedVoice;
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
@@ -359,15 +413,28 @@ export default function ConversationPage() {
       utterance.onerror = (e: any) => {
         console.warn("TTS chunk error:", e);
         const errType = e.error || "unknown";
-        // Ignore "interrupted" since it triggers when we click cancel/mic stop
         if (errType !== "interrupted" && errType !== "canceled") {
-          const errorMsg: Message = {
-            id: "err-tts-" + Date.now(),
-            role: "ai",
-            content: `[Browser Audio Error: ${errType}]. Please check if your system audio output is enabled or try refreshing Chrome.`,
-            timestamp: new Date(),
+          console.warn("Speech synthesis failed, trying Cloud fallback...");
+          const encodedText = encodeURIComponent(textToSpeak);
+          const fallbackUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${encodedText}`;
+          const audio = new Audio(fallbackUrl);
+          activeAudioRef.current = audio;
+          audio.onended = () => {
+            if (fallbackTimeout) clearTimeout(fallbackTimeout);
+            chunkIndex++;
+            speakNextChunk();
           };
-          setMessages((prev) => [...prev, errorMsg]);
+          audio.onerror = () => {
+            if (fallbackTimeout) clearTimeout(fallbackTimeout);
+            chunkIndex++;
+            speakNextChunk();
+          };
+          audio.play().catch(() => {
+            if (fallbackTimeout) clearTimeout(fallbackTimeout);
+            chunkIndex++;
+            speakNextChunk();
+          });
+          return;
         }
         if (fallbackTimeout) clearTimeout(fallbackTimeout);
         chunkIndex++;
@@ -375,8 +442,9 @@ export default function ConversationPage() {
       };
       window.speechSynthesis.speak(utterance);
     };
+
     speakNextChunk();
-  }, [voices]);
+  }, [voices, voiceEngine]);
 
   // Process user text input (both keyboard & voice)
   const processInput = useCallback(
@@ -581,19 +649,35 @@ export default function ConversationPage() {
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
+      if (activeAudioRef.current) {
+        try {
+          activeAudioRef.current.pause();
+        } catch (e) {}
+        activeAudioRef.current = null;
+      }
       setIsPaused(false);
       setState("idle");
     }
   }, [state, processInput]);
 
   const handlePauseToggle = useCallback(() => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    if (typeof window === "undefined") return;
 
     if (state === "speaking" && !isPaused) {
-      window.speechSynthesis.pause();
+      if (window.speechSynthesis) window.speechSynthesis.pause();
+      if (activeAudioRef.current) {
+        try {
+          activeAudioRef.current.pause();
+        } catch (e) {}
+      }
       setIsPaused(true);
     } else if (isPaused) {
-      window.speechSynthesis.resume();
+      if (window.speechSynthesis) window.speechSynthesis.resume();
+      if (activeAudioRef.current) {
+        try {
+          activeAudioRef.current.play().catch(() => {});
+        } catch (e) {}
+      }
       setIsPaused(false);
     }
   }, [state, isPaused]);
@@ -676,6 +760,13 @@ export default function ConversationPage() {
               ))}
             </div>
           )}
+          {/* Voice Engine Toggle */}
+          <button
+            onClick={() => setVoiceEngine(prev => prev === "system" ? "cloud" : "system")}
+            className="mr-2 text-xs px-2 py-1 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-muted-foreground transition-all cursor-pointer"
+          >
+            Voice: {voiceEngine === "system" ? "System" : "Cloud (Google)"}
+          </button>
 
           <button
             onClick={() => setShowTranscript(!showTranscript)}

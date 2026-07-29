@@ -356,8 +356,19 @@ export default function ConversationPage() {
         chunkIndex++;
         speakNextChunk();
       };
-      utterance.onerror = (e) => {
+      utterance.onerror = (e: any) => {
         console.warn("TTS chunk error:", e);
+        const errType = e.error || "unknown";
+        // Ignore "interrupted" since it triggers when we click cancel/mic stop
+        if (errType !== "interrupted" && errType !== "canceled") {
+          const errorMsg: Message = {
+            id: "err-tts-" + Date.now(),
+            role: "ai",
+            content: `[Browser Audio Error: ${errType}]. Please check if your system audio output is enabled or try refreshing Chrome.`,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, errorMsg]);
+        }
         if (fallbackTimeout) clearTimeout(fallbackTimeout);
         chunkIndex++;
         speakNextChunk();

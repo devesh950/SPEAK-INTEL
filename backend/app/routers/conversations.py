@@ -12,51 +12,37 @@ router = APIRouter()
 
 @router.get("/debug-api")
 async def debug_api():
-    """Temporary debug endpoint to test Gemini API connectivity."""
-    results = []
-    api_key = settings.gemini_api_key
-    key_preview = ("***" + api_key[-6:]) if len(api_key) > 6 else "(empty)"
+    """Debug endpoint to test Groq API connectivity."""
+    groq_key = settings.groq_api_key
+    groq_preview = ("***" + groq_key[-6:]) if len(groq_key) > 6 else "(empty)"
     
-    models_to_test = [
-        ("v1beta", "gemini-2.0-flash"),
-        ("v1", "gemini-2.0-flash"),
-        ("v1beta", "gemini-1.5-flash-latest"),
-        ("v1beta", "gemini-pro"),
-    ]
+    result = {"provider": "groq", "key_preview": groq_preview, "key_length": len(groq_key)}
+    
+    if not groq_key:
+        result["status"] = "NO_KEY"
+        result["message"] = "GROQ_API_KEY is not set in environment variables"
+        return result
     
     async with httpx.AsyncClient(timeout=15.0) as client:
-        for api_ver, model in models_to_test:
-            url = f"https://generativelanguage.googleapis.com/{api_ver}/models/{model}:generateContent"
-            payload = {
-                "contents": [{"role": "user", "parts": [{"text": "Say hello"}]}],
-                "generationConfig": {"maxOutputTokens": 50}
-            }
-            headers = {
-                "Content-Type": "application/json",
-                "x-goog-api-key": api_key,
-            }
-            try:
-                resp = await client.post(url, json=payload, headers=headers)
-                body = resp.text[:500]
-                results.append({
-                    "model": f"{api_ver}/{model}",
-                    "status": resp.status_code,
-                    "body": body
-                })
-                if resp.status_code == 200:
-                    break  # Found a working model
-            except Exception as e:
-                results.append({
-                    "model": f"{api_ver}/{model}",
-                    "status": "error",
-                    "body": str(e)
-                })
+        try:
+            resp = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                json={
+                    "model": "llama-3.1-8b-instant",
+                    "messages": [{"role": "user", "content": "Say hello in one sentence"}],
+                    "max_tokens": 50,
+                },
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {groq_key}",
+                },
+            )
+            result["http_status"] = resp.status_code
+            result["body"] = resp.text[:500]
+        except Exception as e:
+            result["error"] = str(e)
     
-    return {
-        "api_key_preview": key_preview,
-        "key_length": len(api_key),
-        "results": results
-    }
+    return result
 
 
 class ChatRequest(BaseModel):

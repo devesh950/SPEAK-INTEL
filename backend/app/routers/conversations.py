@@ -4,8 +4,59 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from app.services.ai_coach import ai_coach
+from app.config import settings
+import httpx
 
 router = APIRouter()
+
+
+@router.get("/debug-api")
+async def debug_api():
+    """Temporary debug endpoint to test Gemini API connectivity."""
+    results = []
+    api_key = settings.gemini_api_key
+    key_preview = ("***" + api_key[-6:]) if len(api_key) > 6 else "(empty)"
+    
+    models_to_test = [
+        ("v1beta", "gemini-2.0-flash"),
+        ("v1", "gemini-2.0-flash"),
+        ("v1beta", "gemini-1.5-flash-latest"),
+        ("v1beta", "gemini-pro"),
+    ]
+    
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        for api_ver, model in models_to_test:
+            url = f"https://generativelanguage.googleapis.com/{api_ver}/models/{model}:generateContent"
+            payload = {
+                "contents": [{"role": "user", "parts": [{"text": "Say hello"}]}],
+                "generationConfig": {"maxOutputTokens": 50}
+            }
+            headers = {
+                "Content-Type": "application/json",
+                "x-goog-api-key": api_key,
+            }
+            try:
+                resp = await client.post(url, json=payload, headers=headers)
+                body = resp.text[:500]
+                results.append({
+                    "model": f"{api_ver}/{model}",
+                    "status": resp.status_code,
+                    "body": body
+                })
+                if resp.status_code == 200:
+                    break  # Found a working model
+            except Exception as e:
+                results.append({
+                    "model": f"{api_ver}/{model}",
+                    "status": "error",
+                    "body": str(e)
+                })
+    
+    return {
+        "api_key_preview": key_preview,
+        "key_length": len(api_key),
+        "results": results
+    }
 
 
 class ChatRequest(BaseModel):

@@ -269,50 +269,59 @@ export default function ConversationPage() {
     }
     setIsPaused(false);
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Filter all English voice packages
+    // Find the best voice
     const englishVoices = voices.filter(
       (v) =>
         v.lang.startsWith("en-US") ||
         v.lang.startsWith("en-GB") ||
         v.lang.startsWith("en-")
     );
-
-    // List of standard female voice keywords across Windows, macOS, iOS, and Android
     const femaleVoiceNames = ["zira", "hazel", "samantha", "sara", "karen", "susan", "google us english", "google uk english female", "female"];
-    
-    let voice = englishVoices.find((v) => {
+    let selectedVoice = englishVoices.find((v) => {
       const nameLower = v.name.toLowerCase();
       return femaleVoiceNames.some((femaleName) => nameLower.includes(femaleName));
     });
-
-    // Fallbacks if no explicit female voice found
-    if (!voice) {
-      voice = englishVoices.find((v) => v.name.toLowerCase().includes("female"));
+    if (!selectedVoice) {
+      selectedVoice = englishVoices.find((v) => v.name.toLowerCase().includes("female"));
     }
-    if (!voice) {
-      voice = englishVoices[0]; // standard system fallback
+    if (!selectedVoice) {
+      selectedVoice = englishVoices[0];
     }
 
-    if (voice) utterance.voice = voice;
+    // Chrome TTS silently fails on long text (>200 chars). Split into sentences.
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    const chunks = sentences.filter((s) => s.trim().length > 0);
 
-    utterance.onstart = () => {
-      setState("speaking");
-      setIsPaused(false);
-    };
-    utterance.onend = () => {
-      setState("idle");
-      setIsPaused(false);
-      if (onEndCallback) onEndCallback();
-    };
-    utterance.onerror = () => {
-      setState("idle");
-      setIsPaused(false);
-      if (onEndCallback) onEndCallback();
-    };
+    if (chunks.length === 0) return;
 
-    window.speechSynthesis.speak(utterance);
+    let chunkIndex = 0;
+    const speakNextChunk = () => {
+      if (chunkIndex >= chunks.length) {
+        setState("idle");
+        setIsPaused(false);
+        if (onEndCallback) onEndCallback();
+        return;
+      }
+      const utterance = new SpeechSynthesisUtterance(chunks[chunkIndex].trim());
+      if (selectedVoice) utterance.voice = selectedVoice;
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+
+      utterance.onstart = () => {
+        setState("speaking");
+        setIsPaused(false);
+      };
+      utterance.onend = () => {
+        chunkIndex++;
+        speakNextChunk();
+      };
+      utterance.onerror = () => {
+        chunkIndex++;
+        speakNextChunk();
+      };
+      window.speechSynthesis.speak(utterance);
+    };
+    speakNextChunk();
   }, [voices]);
 
   // Process user text input (both keyboard & voice)
@@ -348,8 +357,22 @@ export default function ConversationPage() {
         };
 
         setMessages((prev) => [...prev, aiMsg]);
-        const speakContent = data.response.split("📝")[0].split("Feedback:")[0].trim();
-        speakText(speakContent);
+        // Extract only the conversational part (before feedback section)
+        let speakContent = data.response;
+        // Remove everything after the feedback emoji or "Feedback:" header
+        const feedbackMarkers = ["\u{1F4DD}", "📝", "**Feedback", "Feedback:"];
+        for (const marker of feedbackMarkers) {
+          const idx = speakContent.indexOf(marker);
+          if (idx > 0) {
+            speakContent = speakContent.substring(0, idx);
+            break;
+          }
+        }
+        // Also strip any remaining markdown formatting
+        speakContent = speakContent.replace(/\*\*/g, "").replace(/\*/g, "").trim();
+        if (speakContent.length > 0) {
+          speakText(speakContent);
+        }
       } catch (error) {
         console.error("API request failed, fallback to offline AI analysis.", error);
 

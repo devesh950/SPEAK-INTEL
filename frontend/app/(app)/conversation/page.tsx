@@ -239,6 +239,8 @@ export default function ConversationPage() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voiceEngine, setVoiceEngine] = useState<"system" | "cloud">("system");
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [showTroubleshooter, setShowTroubleshooter] = useState(false);
+  const [diagnosticLog, setDiagnosticLog] = useState<string>("");
 
   // Load initial welcome greeting and pre-load voices to avoid async browser delay
   useEffect(() => {
@@ -280,6 +282,48 @@ export default function ConversationPage() {
       setState("idle");
     }
   }, []);
+
+  const testSystemVoice = () => {
+    setDiagnosticLog("Initializing System TTS...");
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      setDiagnosticLog("System TTS: window.speechSynthesis not supported!");
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
+      const utterance = new SpeechSynthesisUtterance("Testing browser voice audio output.");
+      
+      utterance.onstart = () => setDiagnosticLog("System TTS: Started playing...");
+      utterance.onend = () => setDiagnosticLog("System TTS: Completed successfully!");
+      utterance.onerror = (e: any) => setDiagnosticLog(`System TTS Error: ${e.error || "unknown"}`);
+      
+      window.speechSynthesis.speak(utterance);
+      setDiagnosticLog("System TTS: Queued speak utterance...");
+    } catch (e: any) {
+      setDiagnosticLog(`System TTS Exception: ${e.message}`);
+    }
+  };
+
+  const testCloudVoice = () => {
+    setDiagnosticLog("Initializing Cloud Audio...");
+    try {
+      const audio = new Audio("https://dict.youdao.com/dictvoice?type=0&audio=Testing%20cloud%20audio%20output");
+      activeAudioRef.current = audio;
+      
+      audio.onplay = () => setDiagnosticLog("Cloud Audio: Started playing...");
+      audio.onended = () => setDiagnosticLog("Cloud Audio: Completed successfully!");
+      audio.onerror = (e: any) => setDiagnosticLog(`Cloud Audio Error: ${e.message || "playback failed"}`);
+      
+      audio.play().then(() => {
+        setDiagnosticLog("Cloud Audio: Play promise succeeded...");
+      }).catch((err: any) => {
+        setDiagnosticLog(`Cloud Audio Play Blocked: ${err.name} - ${err.message}`);
+      });
+    } catch (e: any) {
+      setDiagnosticLog(`Cloud Audio Exception: ${e.message}`);
+    }
+  };
 
   // Text-to-Speech (TTS) synthesizer helper
   const speakText = useCallback((text: string, onEndCallback?: () => void) => {
@@ -858,6 +902,39 @@ export default function ConversationPage() {
               </div>
             </motion.div>
           )}
+
+          {/* Audio Troubleshooter Panel */}
+          {showTroubleshooter && (
+            <div className="mt-2 p-3 rounded-xl bg-white/5 border border-white/10 text-xs max-w-sm mx-auto text-center space-y-2 relative z-10 w-full">
+              <p className="font-semibold text-white/80">Audio Diagnostics</p>
+              <div className="flex gap-2 justify-center">
+                <button
+                  onClick={testSystemVoice}
+                  className="px-2 py-1 rounded bg-primary/20 hover:bg-primary/30 text-primary-light transition-all cursor-pointer border border-primary/30"
+                >
+                  Test System Voice
+                </button>
+                <button
+                  onClick={testCloudVoice}
+                  className="px-2 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-all cursor-pointer border border-emerald-500/30"
+                >
+                  Test Cloud Audio
+                </button>
+              </div>
+              {diagnosticLog && (
+                <p className="text-[10px] text-muted-foreground bg-black/30 p-1.5 rounded font-mono break-all text-left">
+                  {diagnosticLog}
+                </p>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={() => setShowTroubleshooter(prev => !prev)}
+            className="mt-2 text-[10px] text-muted-foreground hover:text-white transition-all underline cursor-pointer"
+          >
+            {showTroubleshooter ? "Hide Diagnostics" : "Diagnose Audio (No Sound?)"}
+          </button>
 
           {/* Controls */}
           <div className="mt-4 flex items-center gap-6">

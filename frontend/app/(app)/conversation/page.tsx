@@ -413,8 +413,15 @@ export default function ConversationPage() {
         // Use custom backend edge-tts proxy (highly reliable, clean MP3 stream, no blocks)
         const encodedText = encodeURIComponent(textToSpeak);
         const url = `${API_BASE_URL}/api/conversations/tts?text=${encodedText}`;
-        const audio = new Audio(url);
-        activeAudioRef.current = audio;
+        
+        let audio = activeAudioRef.current;
+        if (!audio) {
+          audio = new Audio(url);
+          activeAudioRef.current = audio;
+        } else {
+          audio.src = url;
+          audio.load();
+        }
         
         audio.onplay = () => {
           setIsPaused(false);
@@ -646,15 +653,13 @@ export default function ConversationPage() {
   const handleMicClick = useCallback(() => {
     if (state === "idle") {
       setIsPaused(false);
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        // Unlock browser speech synthesis autoplay restrictions
-        try {
-          const unlockUtterance = new SpeechSynthesisUtterance("");
-          window.speechSynthesis.speak(unlockUtterance);
-        } catch (e) {
-          console.warn("Failed to unlock TTS autoplay:", e);
-        }
+      // Pre-activate Audio player channel inside user gesture handler to bypass browser blocks
+      try {
+        const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAAD");
+        audio.play().catch(() => {});
+        activeAudioRef.current = audio;
+      } catch (e) {
+        console.warn("Failed to pre-activate cloud audio:", e);
       }
 
       setState("listening");
@@ -734,13 +739,13 @@ export default function ConversationPage() {
     const text = inputText;
     setInputText("");
 
-    if (typeof window !== "undefined" && window.speechSynthesis) {
+    if (typeof window !== "undefined") {
+      // Pre-activate Audio player channel during submit gesture
       try {
-        const unlockUtterance = new SpeechSynthesisUtterance("");
-        window.speechSynthesis.speak(unlockUtterance);
-      } catch (e) {
-        console.warn("Failed to unlock TTS autoplay:", e);
-      }
+        const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAAD");
+        audio.play().catch(() => {});
+        activeAudioRef.current = audio;
+      } catch (e) {}
     }
 
     processInput(text);

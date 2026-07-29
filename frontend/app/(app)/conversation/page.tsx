@@ -282,10 +282,10 @@ export default function ConversationPage() {
   // Text-to-Speech (TTS) synthesizer helper
   const speakText = useCallback((text: string, onEndCallback?: () => void) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel(); // stop any active speech
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-    }
+    
+    // Stop active speech and unconditionally resume to clear any locked Chrome queue
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
     setIsPaused(false);
     setState("speaking");
 
@@ -319,7 +319,11 @@ export default function ConversationPage() {
     }
 
     let chunkIndex = 0;
+    let fallbackTimeout: any = null;
+
     const speakNextChunk = () => {
+      if (fallbackTimeout) clearTimeout(fallbackTimeout);
+
       if (stateRef.current !== "speaking") {
         return; // manually stopped, abort speaking sequence
       }
@@ -334,14 +338,24 @@ export default function ConversationPage() {
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
 
+      // Set a 6-second safety timeout. If the chunk hangs or doesn't speak, move on.
+      fallbackTimeout = setTimeout(() => {
+        console.warn("TTS chunk timeout. Skipping stuck chunk.");
+        chunkIndex++;
+        speakNextChunk();
+      }, 6000);
+
       utterance.onstart = () => {
         setIsPaused(false);
       };
       utterance.onend = () => {
+        if (fallbackTimeout) clearTimeout(fallbackTimeout);
         chunkIndex++;
         speakNextChunk();
       };
-      utterance.onerror = () => {
+      utterance.onerror = (e) => {
+        console.warn("TTS chunk error:", e);
+        if (fallbackTimeout) clearTimeout(fallbackTimeout);
         chunkIndex++;
         speakNextChunk();
       };

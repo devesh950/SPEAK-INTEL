@@ -260,6 +260,22 @@ export default function ConversationPage() {
     }
   }, [session]);
 
+  const stateRef = useRef<ConversationState>("idle");
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  const startListening = useCallback(() => {
+    setState("listening");
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.start();
+      } catch (e) {
+        console.warn("Could not start speech recognition:", e);
+      }
+    }
+  }, []);
+
   // Text-to-Speech (TTS) synthesizer helper
   const speakText = useCallback((text: string, onEndCallback?: () => void) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -268,6 +284,7 @@ export default function ConversationPage() {
       window.speechSynthesis.resume();
     }
     setIsPaused(false);
+    setState("speaking");
 
     // Find the best voice
     const englishVoices = voices.filter(
@@ -292,10 +309,17 @@ export default function ConversationPage() {
     const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
     const chunks = sentences.filter((s) => s.trim().length > 0);
 
-    if (chunks.length === 0) return;
+    if (chunks.length === 0) {
+      setState("idle");
+      if (onEndCallback) onEndCallback();
+      return;
+    }
 
     let chunkIndex = 0;
     const speakNextChunk = () => {
+      if (stateRef.current !== "speaking") {
+        return; // manually stopped, abort speaking sequence
+      }
       if (chunkIndex >= chunks.length) {
         setState("idle");
         setIsPaused(false);
@@ -308,7 +332,6 @@ export default function ConversationPage() {
       utterance.pitch = 1.0;
 
       utterance.onstart = () => {
-        setState("speaking");
         setIsPaused(false);
       };
       utterance.onend = () => {
@@ -371,7 +394,9 @@ export default function ConversationPage() {
         // Also strip any remaining markdown formatting
         speakContent = speakContent.replace(/\*\*/g, "").replace(/\*/g, "").trim();
         if (speakContent.length > 0) {
-          speakText(speakContent);
+          speakText(speakContent, startListening);
+        } else {
+          startListening();
         }
       } catch (error) {
         console.error("API request failed, fallback to offline AI analysis.", error);
@@ -411,10 +436,10 @@ export default function ConversationPage() {
         };
 
         setMessages((prev) => [...prev, aiMsg]);
-        speakText(aiMsg.content);
+        speakText(aiMsg.content, startListening);
       }
     },
-    [messages, speakText]
+    [messages, speakText, startListening]
   );
 
   // Initialize Speech Recognition API

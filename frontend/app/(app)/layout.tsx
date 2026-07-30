@@ -41,7 +41,7 @@ const navItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session, update: updateSession } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -69,21 +69,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const cookies = document.cookie.split(";").map((c) => c.trim());
-    const hasSession = cookies.some(
-      (c) =>
-        c.startsWith("speakintel-demo-session=") ||
-        c.startsWith("authjs.session-token=") ||
-        c.startsWith("__Secure-authjs.session-token=") ||
-        c.startsWith("next-auth.session-token=") ||
-        c.startsWith("__Secure-next-auth.session-token=")
-    );
+    const hasDemoSession = cookies.some((c) => c.startsWith("speakintel-demo-session="));
 
-    if (!hasSession) {
-      router.push(`/sign-in?callbackUrl=${encodeURIComponent(pathname)}`);
-    } else {
+    if (status === "loading") return;
+
+    if (status === "authenticated" || hasDemoSession) {
       setAuthorized(true);
+    } else {
+      router.push(`/sign-in?callbackUrl=${encodeURIComponent(pathname)}`);
     }
-  }, [pathname, router]);
+  }, [pathname, router, status]);
 
   // Sync profile details with session or local state
   useEffect(() => {

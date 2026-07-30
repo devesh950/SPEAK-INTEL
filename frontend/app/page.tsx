@@ -74,7 +74,7 @@ function Navbar() {
             >
               Sign In
             </Link>
-            <Link href="/sign-up" className="btn-primary text-sm !py-2 !px-5">
+            <Link href="/sign-in" className="btn-primary text-sm !py-2 !px-5">
               Start Free
             </Link>
           </div>
@@ -113,7 +113,7 @@ function Navbar() {
                 <Link href="/sign-in" className="btn-secondary text-sm text-center">
                   Sign In
                 </Link>
-                <Link href="/sign-up" className="btn-primary text-sm text-center">
+                <Link href="/sign-in" className="btn-primary text-sm text-center">
                   Start Free
                 </Link>
               </div>
@@ -192,7 +192,7 @@ function HeroSection() {
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
           <Link
-            href="/sign-up"
+            href="/sign-in"
             className="btn-primary text-base flex items-center gap-2 !px-8 !py-3.5"
           >
             Start Free <ArrowRight className="w-5 h-5" />
@@ -661,7 +661,7 @@ function PricingSection() {
               </ul>
 
               <Link
-                href="/sign-up"
+                href="/sign-in"
                 className={`text-center text-sm font-semibold py-3 rounded-xl transition-all ${
                   plan.highlighted
                     ? "btn-primary"
@@ -801,7 +801,7 @@ function CTASection() {
               with SpeakIntel AI. Start your journey today — it&apos;s free!
             </p>
             <Link
-              href="/sign-up"
+              href="/sign-in"
               className="btn-primary text-base inline-flex items-center gap-2 !px-10 !py-4"
             >
               Start Free Today <ArrowRight className="w-5 h-5" />

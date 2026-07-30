@@ -239,8 +239,56 @@ export default function ConversationPage() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voiceEngine, setVoiceEngine] = useState<"system" | "cloud">("system");
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const [showTroubleshooter, setShowTroubleshooter] = useState(false);
   const [diagnosticLog, setDiagnosticLog] = useState<string>("");
+
+  // Helper: ensure AudioContext exists and is resumed
+  const ensureAudioContext = useCallback(() => {
+    if (!audioContextRef.current || audioContextRef.current.state === "closed") {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (audioContextRef.current.state === "suspended") {
+      audioContextRef.current.resume();
+    }
+    return audioContextRef.current;
+  }, []);
+
+  // Helper: play MP3 from URL using Web Audio API (bypasses autoplay)
+  const playAudioViaWebAPI = useCallback(async (
+    url: string,
+    onEnd: () => void,
+    onError: () => void
+  ) => {
+    try {
+      const ctx = ensureAudioContext();
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      
+      // Stop any currently playing source
+      if (currentSourceRef.current) {
+        try { currentSourceRef.current.stop(); } catch (e) {}
+      }
+      
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      currentSourceRef.current = source;
+      
+      source.onended = () => {
+        currentSourceRef.current = null;
+        onEnd();
+      };
+      
+      source.start(0);
+    } catch (err) {
+      console.warn("Web Audio API playback failed:", err);
+      onError();
+    }
+  }, [ensureAudioContext]);
 
   // Load initial welcome greeting and pre-load voices to avoid async browser delay
   useEffect(() => {
@@ -306,21 +354,31 @@ export default function ConversationPage() {
   };
 
   const testCloudVoice = () => {
-    setDiagnosticLog("Initializing Cloud Audio...");
+    setDiagnosticLog("Initializing Cloud Audio via Web Audio API...");
     try {
+      const ctx = ensureAudioContext();
+      setDiagnosticLog(`AudioContext state: ${ctx.state}. Fetching audio...`);
       const encodedText = encodeURIComponent("Testing cloud audio output");
-      const audio = new Audio(`${API_BASE_URL}/api/conversations/tts?text=${encodedText}`);
-      activeAudioRef.current = audio;
+      const url = `${API_BASE_URL}/api/conversations/tts?text=${encodedText}`;
       
-      audio.onplay = () => setDiagnosticLog("Cloud Audio: Started playing...");
-      audio.onended = () => setDiagnosticLog("Cloud Audio: Completed successfully!");
-      audio.onerror = (e: any) => setDiagnosticLog(`Cloud Audio Error: ${e.message || "playback failed"}`);
-      
-      audio.play().then(() => {
-        setDiagnosticLog("Cloud Audio: Play promise succeeded...");
-      }).catch((err: any) => {
-        setDiagnosticLog(`Cloud Audio Play Blocked: ${err.name} - ${err.message}`);
-      });
+      fetch(url)
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          setDiagnosticLog("Cloud Audio: Fetch succeeded, decoding...");
+          return res.arrayBuffer();
+        })
+        .then(buf => ctx.decodeAudioData(buf))
+        .then(audioBuffer => {
+          const source = ctx.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(ctx.destination);
+          source.onended = () => setDiagnosticLog("Cloud Audio: Completed successfully!");
+          source.start(0);
+          setDiagnosticLog("Cloud Audio: Playing via Web Audio API...");
+        })
+        .catch((err: any) => {
+          setDiagnosticLog(`Cloud Audio Error: ${err.message}`);
+        });
     } catch (e: any) {
       setDiagnosticLog(`Cloud Audio Exception: ${e.message}`);
     }
@@ -410,31 +468,25 @@ export default function ConversationPage() {
       }, 4500);
 
       if (voiceEngine === "cloud") {
-        // Use custom backend edge-tts proxy (highly reliable, clean MP3 stream, no blocks)
+        // Use Web Audio API to play backend edge-tts MP3 (bypasses autoplay restrictions)
         const encodedText = encodeURIComponent(textToSpeak);
         const url = `${API_BASE_URL}/api/conversations/tts?text=${encodedText}`;
         
-        const audio = new Audio(url);
-        activeAudioRef.current = audio;
-        
-        audio.onplay = () => {
-          setIsPaused(false);
-        };
-        audio.onended = () => {
-          if (fallbackTimeout) clearTimeout(fallbackTimeout);
-          chunkIndex++;
-          speakNextChunk();
-        };
-        audio.onerror = () => {
-          console.warn("Cloud HTML5 TTS failed, trying system speech fallback...");
-          if (fallbackTimeout) clearTimeout(fallbackTimeout);
-          speakSystemChunk(textToSpeak);
-        };
-        audio.play().catch((err) => {
-          console.warn("Cloud HTML5 play blocked/failed, trying system speech fallback:", err);
-          if (fallbackTimeout) clearTimeout(fallbackTimeout);
-          speakSystemChunk(textToSpeak);
-        });
+        playAudioViaWebAPI(
+          url,
+          () => {
+            // onEnd
+            if (fallbackTimeout) clearTimeout(fallbackTimeout);
+            chunkIndex++;
+            speakNextChunk();
+          },
+          () => {
+            // onError - fall back to system speech
+            console.warn("Web Audio API TTS failed, trying system speech fallback...");
+            if (fallbackTimeout) clearTimeout(fallbackTimeout);
+            speakSystemChunk(textToSpeak);
+          }
+        );
       } else {
         speakSystemChunk(textToSpeak);
       }
@@ -492,7 +544,7 @@ export default function ConversationPage() {
     };
 
     speakNextChunk();
-  }, [voices, voiceEngine]);
+  }, [voices, voiceEngine, playAudioViaWebAPI]);
 
   // Process user text input (both keyboard & voice)
   const processInput = useCallback(
@@ -647,8 +699,10 @@ export default function ConversationPage() {
   const handleMicClick = useCallback(() => {
     if (state === "idle") {
       setIsPaused(false);
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
+      // Unlock AudioContext on user gesture (stays unlocked permanently)
+      if (typeof window !== "undefined") {
+        ensureAudioContext();
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
       }
 
       setState("listening");
@@ -690,6 +744,10 @@ export default function ConversationPage() {
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
+      if (currentSourceRef.current) {
+        try { currentSourceRef.current.stop(); } catch (e) {}
+        currentSourceRef.current = null;
+      }
       if (activeAudioRef.current) {
         try {
           activeAudioRef.current.pause();
@@ -699,7 +757,7 @@ export default function ConversationPage() {
       setIsPaused(false);
       setState("idle");
     }
-  }, [state, processInput]);
+  }, [state, processInput, ensureAudioContext]);
 
   const handlePauseToggle = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -728,7 +786,8 @@ export default function ConversationPage() {
     const text = inputText;
     setInputText("");
 
-    // Process input directly without pre-activation
+    // Unlock AudioContext on user gesture
+    if (typeof window !== "undefined") ensureAudioContext();
     processInput(text);
   };
 

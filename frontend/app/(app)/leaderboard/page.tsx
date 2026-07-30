@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Trophy, Medal, Flame, Star, Crown, Award, TrendingUp } from "lucide-react";
+import { getProgressStats } from "@/lib/progress";
 
 const leaderboardData = [
   { rank: 1, name: "Arun Patel", xp: 12500, level: 15, streak: 45, avatar: "AP" },
@@ -17,19 +18,70 @@ const leaderboardData = [
   { rank: 10, name: "Lakshmi Iyer", xp: 5500, level: 6, streak: 10, avatar: "LI" },
 ];
 
-const achievements = [
-  { name: "First Words", description: "Complete your first conversation", icon: "🎤", unlocked: true },
-  { name: "Week Warrior", description: "Practice for 7 days in a row", icon: "🔥", unlocked: true },
-  { name: "Vocabulary Hero", description: "Learn 100 new words", icon: "📚", unlocked: true },
-  { name: "Interview Pro", description: "Score 8+ in a mock interview", icon: "💼", unlocked: true },
-  { name: "Grammar Master", description: "Achieve 90% grammar accuracy", icon: "✍️", unlocked: false },
-  { name: "Fluent Speaker", description: "30-day streak", icon: "🏆", unlocked: false },
-  { name: "Polyglot", description: "Learn 500 vocabulary words", icon: "🌍", unlocked: false },
-  { name: "Perfectionist", description: "Score 10/10 in any session", icon: "⭐", unlocked: false },
-];
-
 export default function LeaderboardPage() {
   const [tab, setTab] = useState<"weekly" | "monthly" | "all">("weekly");
+  const [xp, setXp] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [userRank, setUserRank] = useState(11);
+  const [sessionsDone, setSessionsDone] = useState(0);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [wordsLearned, setWordsLearned] = useState(0);
+  const [interviewScore, setInterviewScore] = useState(0);
+  const [grammarScore, setGrammarScore] = useState(0);
+  const [overallScore, setOverallScore] = useState(0);
+
+  useEffect(() => {
+    const stats = getProgressStats();
+    
+    // XP is computed from dailyPractice and wordsLearned
+    const computedXp = (stats.dailyPractice || 0) * 10 + (stats.wordsLearned || 0) * 5;
+    setXp(computedXp);
+    setLevel(Math.floor(computedXp / 1000) + 1);
+    setSessionsDone(stats.sessionsDone || 0);
+    setCurrentStreak(stats.currentStreak || 0);
+    setWordsLearned(stats.wordsLearned || 0);
+    setInterviewScore(stats.interviewScore || 0);
+    setGrammarScore(stats.detailedScores?.grammar || 0);
+    setOverallScore(stats.detailedScores?.overall || 0);
+
+    // Compute rank based on XP vs leaderboard ranks
+    if (computedXp === 0) {
+      setUserRank(11);
+    } else if (computedXp < 5500) {
+      setUserRank(11);
+    } else if (computedXp < 6100) {
+      setUserRank(10);
+    } else if (computedXp < 6800) {
+      setUserRank(9);
+    } else if (computedXp < 7500) {
+      setUserRank(8);
+    } else if (computedXp < 8200) {
+      setUserRank(7);
+    } else if (computedXp < 8900) {
+      setUserRank(6);
+    } else if (computedXp < 9600) {
+      setUserRank(5);
+    } else if (computedXp < 10800) {
+      setUserRank(4);
+    } else if (computedXp < 11200) {
+      setUserRank(3);
+    } else if (computedXp < 12500) {
+      setUserRank(2);
+    } else {
+      setUserRank(1);
+    }
+  }, []);
+
+  const achievements = [
+    { name: "First Words", description: "Complete your first conversation", icon: "🎤", unlocked: sessionsDone > 0 },
+    { name: "Week Warrior", description: "Practice for 7 days in a row", icon: "🔥", unlocked: currentStreak >= 7 },
+    { name: "Vocabulary Hero", description: "Learn 100 new words", icon: "📚", unlocked: wordsLearned >= 100 },
+    { name: "Interview Pro", description: "Score 8+ in a mock interview", icon: "💼", unlocked: interviewScore >= 80 || interviewScore >= 8 },
+    { name: "Grammar Master", description: "Achieve 90% grammar accuracy", icon: "✍️", unlocked: grammarScore >= 90 },
+    { name: "Fluent Speaker", description: "30-day streak", icon: "🏆", unlocked: currentStreak >= 30 },
+    { name: "Polyglot", description: "Learn 500 vocabulary words", icon: "🌍", unlocked: wordsLearned >= 500 },
+    { name: "Perfectionist", description: "Score 95%+ overall in any session", icon: "⭐", unlocked: overallScore >= 95 },
+  ];
 
   return (
     <div className="space-y-8 pb-20 lg:pb-0">
@@ -52,12 +104,12 @@ export default function LeaderboardPage() {
           </div>
           <div className="flex-1">
             <p className="font-semibold">You</p>
-            <p className="text-sm text-muted-foreground">Level 8 · 6,800 XP</p>
+            <p className="text-sm text-muted-foreground">Level {level} · {xp.toLocaleString()} XP</p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-primary-light">#8</p>
+            <p className="text-2xl font-bold text-primary-light">#{userRank === 11 ? "10+" : userRank}</p>
             <div className="flex items-center gap-1 text-xs text-emerald-400">
-              <TrendingUp className="w-3 h-3" /> +3 this week
+              <TrendingUp className="w-3 h-3" /> {xp > 0 ? `+${Math.floor(xp / 100)} this week` : "New Learner"}
             </div>
           </div>
         </div>

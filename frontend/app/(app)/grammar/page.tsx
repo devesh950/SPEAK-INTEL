@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { PenTool, Check, X, ArrowRight, Lightbulb, Send } from "lucide-react";
+import { getProgressStats } from "@/lib/progress";
 
 const grammarExercises = [
   {
@@ -34,6 +35,21 @@ const grammarExercises = [
 export default function GrammarPage() {
   const [inputText, setInputText] = useState("");
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [grammarScore, setGrammarScore] = useState(0);
+
+  useEffect(() => {
+    const stats = getProgressStats();
+    setGrammarScore(stats.detailedScores?.grammar || 0);
+  }, []);
+
+  const items = [
+    { label: "Tenses", score: grammarScore ? Math.min(100, Math.max(10, grammarScore - 5)) : 0 },
+    { label: "Articles", score: grammarScore ? Math.min(100, Math.max(10, grammarScore - 12)) : 0 },
+    { label: "Prepositions", score: grammarScore ? Math.min(100, Math.max(10, grammarScore + 2)) : 0 },
+    { label: "Structure", score: grammarScore ? Math.min(100, Math.max(10, grammarScore - 10)) : 0 },
+    { label: "Passive Voice", score: grammarScore ? Math.min(100, Math.max(10, grammarScore - 15)) : 0 },
+    { label: "SVA", score: grammarScore ? Math.min(100, Math.max(10, grammarScore + 5)) : 0 },
+  ];
 
   return (
     <div className="space-y-8 pb-20 lg:pb-0">
@@ -46,14 +62,7 @@ export default function GrammarPage() {
 
       {/* Score Cards */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-        {[
-          { label: "Tenses", score: 75 },
-          { label: "Articles", score: 68 },
-          { label: "Prepositions", score: 82 },
-          { label: "Structure", score: 70 },
-          { label: "Passive Voice", score: 60 },
-          { label: "SVA", score: 85 },
-        ].map((item) => (
+        {items.map((item) => (
           <motion.div
             key={item.label}
             initial={{ opacity: 0, y: 20 }}
@@ -61,8 +70,8 @@ export default function GrammarPage() {
             className="stat-card text-center"
           >
             <p className={`text-xl font-bold ${
-              item.score >= 80 ? "text-emerald-400" : item.score >= 60 ? "text-amber-400" : "text-red-400"
-            }`}>{item.score}%</p>
+              item.score >= 80 ? "text-emerald-400" : item.score >= 60 ? "text-amber-400" : item.score > 0 ? "text-red-400" : "text-muted-foreground"
+            }`}>{item.score ? `${item.score}%` : "—"}</p>
             <p className="text-[10px] text-muted-foreground mt-1">{item.label}</p>
           </motion.div>
         ))}

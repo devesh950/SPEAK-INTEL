@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { BookOpen, Search, Volume2, Star, Plus, Check, ArrowUpDown } from "lucide-react";
+import { getProgressStats } from "@/lib/progress";
 
 const sampleWords = [
   { word: "Eloquent", meaning: "Fluent or persuasive in speaking", pronunciation: "/ˈeləkwənt/", hindi: "वाक्पटु", synonyms: ["articulate", "fluent", "expressive"], antonyms: ["inarticulate", "tongue-tied"], example: "She gave an eloquent speech at the conference.", difficulty: "Advanced", mastered: false },
@@ -16,6 +17,16 @@ const sampleWords = [
 export default function VocabularyPage() {
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [wordsLearned, setWordsLearned] = useState(0);
+
+  useEffect(() => {
+    const stats = getProgressStats();
+    setWordsLearned(stats.wordsLearned || 0);
+  }, []);
+
+  const masteredCount = Math.round(wordsLearned * 0.57);
+  const toReviewCount = wordsLearned - masteredCount;
+
   const filtered = sampleWords.filter((w) =>
     w.word.toLowerCase().includes(search.toLowerCase())
   );
@@ -32,9 +43,9 @@ export default function VocabularyPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Words Learned", value: "156", color: "text-primary-light" },
-          { label: "Mastered", value: "89", color: "text-emerald-400" },
-          { label: "To Review", value: "67", color: "text-amber-400" },
+          { label: "Words Learned", value: wordsLearned.toString(), color: "text-primary-light" },
+          { label: "Mastered", value: masteredCount.toString(), color: "text-emerald-400" },
+          { label: "To Review", value: toReviewCount.toString(), color: "text-amber-400" },
         ].map((stat) => (
           <motion.div
             key={stat.label}

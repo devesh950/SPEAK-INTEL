@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Mic, Volume2, RotateCcw, Check, X, ArrowRight } from "lucide-react";
 
@@ -32,10 +32,25 @@ const sentences = [
   },
 ];
 
+import { getProgressStats } from "@/lib/progress";
+
 export default function PronunciationPage() {
   const [currentSentence, setCurrentSentence] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [pronunciationScore, setPronunciationScore] = useState(0);
+
+  useEffect(() => {
+    const stats = getProgressStats();
+    setPronunciationScore(stats.detailedScores?.pronunciation || 0);
+  }, []);
+
+  const statItems = [
+    { label: "Accuracy", value: pronunciationScore ? `${pronunciationScore}%` : "—", color: pronunciationScore >= 80 ? "text-emerald-400" : pronunciationScore >= 60 ? "text-amber-400" : pronunciationScore > 0 ? "text-red-400" : "text-muted-foreground" },
+    { label: "Stress", value: pronunciationScore ? `${Math.min(100, Math.max(10, pronunciationScore - 6))}%` : "—", color: pronunciationScore >= 80 ? "text-cyan-400" : "text-muted-foreground" },
+    { label: "Intonation", value: pronunciationScore ? `${Math.min(100, Math.max(10, pronunciationScore - 12))}%` : "—", color: pronunciationScore >= 80 ? "text-purple-400" : "text-muted-foreground" },
+    { label: "Accent", value: pronunciationScore ? `${Math.min(100, Math.max(10, pronunciationScore - 8))}%` : "—", color: pronunciationScore >= 80 ? "text-amber-400" : "text-muted-foreground" },
+  ];
 
   const sentence = sentences[currentSentence];
 
@@ -70,12 +85,7 @@ export default function PronunciationPage() {
 
       {/* Score Cards */}
       <div className="grid grid-cols-4 gap-4">
-        {[
-          { label: "Accuracy", value: "78%", color: "text-emerald-400" },
-          { label: "Stress", value: "72%", color: "text-cyan-400" },
-          { label: "Intonation", value: "65%", color: "text-purple-400" },
-          { label: "Accent", value: "70%", color: "text-amber-400" },
-        ].map((stat) => (
+        {statItems.map((stat) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}

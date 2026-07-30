@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { getProgressStats } from "@/lib/progress";
 import {
   Mic,
   BookOpen,
@@ -17,19 +19,31 @@ import {
   Lock,
 } from "lucide-react";
 
-const challenges = [
-  { id: "introduce", title: "Introduce Yourself", description: "Give a 2-minute self-introduction", icon: Mic, duration: 2, xp: 50, completed: true },
-  { id: "story", title: "Tell a Story", description: "Narrate an interesting story from your life", icon: BookOpen, duration: 5, xp: 80, completed: true },
-  { id: "describe", title: "Describe a Picture", description: "Describe what you see in detail", icon: Lightbulb, duration: 3, xp: 60, completed: false },
-  { id: "debate", title: "Debate", description: "Argue for or against a given topic", icon: Swords, duration: 10, xp: 120, completed: false },
-  { id: "explain", title: "Explain a Topic", description: "Explain a concept clearly and simply", icon: MessageSquare, duration: 5, xp: 80, completed: false },
-  { id: "news", title: "News Discussion", description: "Discuss a current news topic", icon: Newspaper, duration: 8, xp: 100, completed: false },
-  { id: "random", title: "Random Conversation", description: "Talk about anything for 5 minutes", icon: Shuffle, duration: 5, xp: 70, completed: false },
-  { id: "presentation", title: "Presentation Practice", description: "Deliver a short presentation", icon: Presentation, duration: 10, xp: 150, completed: false },
-  { id: "elevator", title: "Elevator Pitch", description: "Pitch an idea in 60 seconds", icon: Rocket, duration: 1, xp: 100, completed: false },
+const challengeTemplates = [
+  { id: "introduce", title: "Introduce Yourself", description: "Give a 2-minute self-introduction", icon: Mic, duration: 2, xp: 50, reqSessions: 1 },
+  { id: "story", title: "Tell a Story", description: "Narrate an interesting story from your life", icon: BookOpen, duration: 5, xp: 80, reqSessions: 2 },
+  { id: "describe", title: "Describe a Picture", description: "Describe what you see in detail", icon: Lightbulb, duration: 3, xp: 60, reqSessions: 3 },
+  { id: "debate", title: "Debate", description: "Argue for or against a given topic", icon: Swords, duration: 10, xp: 120, reqSessions: 4 },
+  { id: "explain", title: "Explain a Topic", description: "Explain a concept clearly and simply", icon: MessageSquare, duration: 5, xp: 80, reqSessions: 5 },
+  { id: "news", title: "News Discussion", description: "Discuss a current news topic", icon: Newspaper, duration: 8, xp: 100, reqSessions: 6 },
+  { id: "random", title: "Random Conversation", description: "Talk about anything for 5 minutes", icon: Shuffle, duration: 5, xp: 70, reqSessions: 7 },
+  { id: "presentation", title: "Presentation Practice", description: "Deliver a short presentation", icon: Presentation, duration: 10, xp: 150, reqSessions: 8 },
+  { id: "elevator", title: "Elevator Pitch", description: "Pitch an idea in 60 seconds", icon: Rocket, duration: 1, xp: 100, reqSessions: 9 },
 ];
 
 export default function ChallengesPage() {
+  const [sessionsDone, setSessionsDone] = useState(0);
+
+  useEffect(() => {
+    const stats = getProgressStats();
+    setSessionsDone(stats.sessionsDone || 0);
+  }, []);
+
+  const challenges = challengeTemplates.map((c) => ({
+    ...c,
+    completed: sessionsDone >= c.reqSessions,
+  }));
+
   const completedCount = challenges.filter((c) => c.completed).length;
 
   return (

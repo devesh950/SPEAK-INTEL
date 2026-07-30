@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { sendMessage, API_BASE_URL } from "@/lib/api";
 import { useSession } from "next-auth/react";
+import { updateRealtimeProgress } from "@/lib/progress";
 // ============================================
 // TYPES
 // ============================================
@@ -566,7 +567,11 @@ export default function ConversationPage() {
       };
 
       setMessages((prev) => [...prev, userMsg]);
-      setState("thinking");
+      // Track session start if first message
+      if (messages.length === 0) {
+        updateRealtimeProgress("session");
+      }
+      updateRealtimeProgress("practice", 1);
 
       try {
         const apiHistory = messages.map((m) => ({
@@ -584,6 +589,14 @@ export default function ConversationPage() {
           scores: data.scores || undefined,
           timestamp: new Date(),
         };
+
+        if (data.scores) {
+          const avgScore = (data.scores.grammar + data.scores.fluency + data.scores.vocabulary) / 3;
+          updateRealtimeProgress("score", avgScore);
+          
+          const wordsCount = text.split(/\s+/).filter(Boolean).length;
+          updateRealtimeProgress("words", Math.min(10, Math.max(1, Math.round(wordsCount / 3))));
+        }
 
         setMessages((prev) => [...prev, aiMsg]);
         // Extract only the conversational part (before feedback section)
@@ -640,6 +653,11 @@ export default function ConversationPage() {
           },
           timestamp: new Date(),
         };
+
+        const avgScore = (grammarScore + 8 + 7) / 3;
+        updateRealtimeProgress("score", avgScore);
+        const wordsCount = text.split(/\s+/).filter(Boolean).length;
+        updateRealtimeProgress("words", Math.min(10, Math.max(1, Math.round(wordsCount / 3))));
 
         setMessages((prev) => [...prev, aiMsg]);
         speakText(aiMsg.content, startListening);

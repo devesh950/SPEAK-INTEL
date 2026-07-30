@@ -1,7 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { getProgressStats, resetProgressStats, UserStats } from "@/lib/progress";
 import {
   Mic,
   Briefcase,
@@ -177,6 +180,94 @@ const recentActivity = [
 // ============================================
 
 export default function DashboardPage() {
+  const { data: session } = useSession();
+  const [userName, setUserName] = useState("Learner");
+  const [isFirstTime, setIsFirstTime] = useState(false);
+  const [progress, setProgress] = useState<UserStats | null>(null);
+
+  useEffect(() => {
+    // Sync username
+    if (session?.user?.name) {
+      setUserName(session.user.name);
+    } else {
+      const cachedName = localStorage.getItem("speakintel-username") || "Learner";
+      setUserName(cachedName);
+    }
+
+    // Track first-time visit vs returning visit
+    const hasVisited = localStorage.getItem("speakintel-visited");
+    if (!hasVisited) {
+      // First-time visitor: reset stats to 0, register visit
+      resetProgressStats();
+      setIsFirstTime(true);
+      localStorage.setItem("speakintel-visited", "true");
+    } else {
+      setIsFirstTime(false);
+    }
+
+    // Load progress metrics
+    setProgress(getProgressStats());
+  }, [session]);
+
+  const statsList = [
+    {
+      label: "Daily Practice",
+      value: progress ? progress.dailyPractice.toString() : "0",
+      unit: "min",
+      icon: Clock,
+      bgColor: "bg-purple-500/10",
+      change: progress && progress.dailyPractice > 0 ? `+${progress.dailyPractice}m` : "New",
+    },
+    {
+      label: "Current Streak",
+      value: progress ? progress.currentStreak.toString() : "0",
+      unit: "days",
+      icon: Flame,
+      bgColor: "bg-orange-500/10",
+      change: "🔥",
+    },
+    {
+      label: "Weekly Progress",
+      value: progress ? progress.weeklyProgress.toString() : "0",
+      unit: "%",
+      icon: TrendingUp,
+      bgColor: "bg-emerald-500/10",
+      change: progress && progress.weeklyProgress > 0 ? `${progress.weeklyProgress}%` : "0%",
+    },
+    {
+      label: "Communication",
+      value: progress && progress.communicationScore > 0 ? progress.communicationScore.toString() : "0.0",
+      unit: "/10",
+      icon: Activity,
+      bgColor: "bg-cyan-500/10",
+      change: progress && progress.communicationScore > 0 ? `★ ${progress.communicationScore}` : "N/A",
+    },
+    {
+      label: "Sessions Done",
+      value: progress ? progress.sessionsDone.toString() : "0",
+      unit: "",
+      icon: CheckCircle,
+      bgColor: "bg-blue-500/10",
+      change: progress && progress.sessionsDone > 0 ? `+${progress.sessionsDone}` : "0",
+    },
+    {
+      label: "Words Learned",
+      value: progress ? progress.wordsLearned.toString() : "0",
+      unit: "",
+      icon: Brain,
+      bgColor: "bg-pink-500/10",
+      change: progress && progress.wordsLearned > 0 ? `+${progress.wordsLearned}` : "0",
+    },
+    {
+      label: "Interview Score",
+      value: progress && progress.interviewScore > 0 ? progress.interviewScore.toString() : "0.0",
+      unit: "/10",
+      icon: Target,
+      bgColor: "bg-amber-500/10",
+      change: progress && progress.interviewScore > 0 ? `★ ${progress.interviewScore}` : "N/A",
+    },
+  ];
+
   return (
     <div className="space-y-8 pb-20 lg:pb-0">
       {/* Header */}
@@ -185,16 +276,16 @@ export default function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
       >
         <h1 className="text-2xl sm:text-3xl font-bold">
-          Welcome back! 👋
+          {isFirstTime ? `Welcome, ${userName}! 👋` : `Welcome back, ${userName}! 👋`}
         </h1>
         <p className="text-muted-foreground mt-1">
-          Here&apos;s your learning progress
+          {isFirstTime ? "Let's start your English learning journey today!" : "Here's your learning progress"}
         </p>
       </motion.div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-        {stats.map((stat, index) => (
+        {statsList.map((stat, index) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}

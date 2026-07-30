@@ -19,6 +19,39 @@
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
+  --color-surface: var(--color-surface);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-card: var(--color-card);
+  --color-card-hover: var(--color-card-hover);
+  --color-border: var(--color-border);
+  --color-border-light: var(--color-border-light);
+  --color-muted: var(--color-muted);
+  --color-muted-foreground: var(--color-muted-foreground);
+
+  /* Font */
+  --font-sans: "Inter", var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #09090b;
+  --radius: 0.75rem;
+
+  --color-surface: #f4f4f5;
+  --color-surface-hover: #e4e4e7;
+  --color-card: #ffffff;
+  --color-card-hover: #f4f4f5;
+  --color-border: #e4e4e7;
+  --color-border-light: #d4d4d8;
+  --color-muted: #71717a;
+  --color-muted-foreground: #52525b;
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+
   --color-surface: #18181b;
   --color-surface-hover: #27272a;
   --color-card: #1e1e23;
@@ -27,16 +60,6 @@
   --color-border-light: #3f3f50;
   --color-muted: #71717a;
   --color-muted-foreground: #a1a1aa;
-
-  /* Font */
-  --font-sans: "Inter", var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
-}
-
-:root {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --radius: 0.75rem;
 }
 
 /* ============================================

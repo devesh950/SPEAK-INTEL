@@ -1,16 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Moon, Sun, Volume2, Globe, Bell, Shield, Palette, Save } from "lucide-react";
+import { useTheme } from "next-themes";
 
 export default function SettingsPage() {
-  const [darkMode, setDarkMode] = useState(true);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [voiceSpeed, setVoiceSpeed] = useState(1);
   const [aiVoice, setAiVoice] = useState("alloy");
   const [notifications, setNotifications] = useState(true);
   const [dailyReminder, setDailyReminder] = useState(true);
   const [weeklyReport, setWeeklyReport] = useState(true);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = theme === "dark";
 
   return (
     <div className="space-y-8 pb-20 lg:pb-0 max-w-2xl">
@@ -35,21 +43,22 @@ export default function SettingsPage() {
         {/* Dark Mode */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {darkMode ? <Moon className="w-5 h-5 text-primary-light" /> : <Sun className="w-5 h-5 text-amber-400" />}
+            {!mounted || isDark ? <Moon className="w-5 h-5 text-primary-light" /> : <Sun className="w-5 h-5 text-amber-400" />}
             <div>
               <p className="text-sm font-medium">Dark Mode</p>
               <p className="text-xs text-muted-foreground">Use dark theme</p>
             </div>
           </div>
           <button
-            onClick={() => setDarkMode(!darkMode)}
-            className={`w-12 h-6 rounded-full transition-all relative ${
-              darkMode ? "bg-primary" : "bg-white/20"
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            disabled={!mounted}
+            className={`w-12 h-6 rounded-full transition-all relative cursor-pointer disabled:opacity-50 ${
+              !mounted || isDark ? "bg-primary" : "bg-white/20"
             }`}
           >
             <div
               className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${
-                darkMode ? "left-6" : "left-0.5"
+                !mounted || isDark ? "left-6" : "left-0.5"
               }`}
             />
           </button>

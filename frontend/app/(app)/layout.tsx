@@ -71,6 +71,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const cookies = document.cookie.split(";").map((c) => c.trim());
     const hasSession = cookies.some(
       (c) =>
+        c.startsWith("speakintel-demo-session=") ||
         c.startsWith("authjs.session-token=") ||
         c.startsWith("__Secure-authjs.session-token=") ||
         c.startsWith("next-auth.session-token=") ||
@@ -84,10 +85,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, router]);
 
+  // Sync profile details with session or local state
   useEffect(() => {
     if (session?.user) {
       setProfileName(session.user.name || session.user.email?.split("@")[0] || "User");
       setProfileImage(session.user.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=User");
+    } else {
+      // Fallback localstorage sync for demo flow
+      const cachedName = localStorage.getItem("speakintel-username") || "Demo User";
+      const cachedImage = localStorage.getItem("speakintel-avatar") || "https://api.dicebear.com/7.x/avataaars/svg?seed=demo";
+      setProfileName(cachedName);
+      setProfileImage(cachedImage);
     }
   }, [session]);
 
@@ -123,6 +131,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const handleSignOutClick = async () => {
+    // Clear custom bypass cookies
+    document.cookie = "speakintel-demo-session=; path=/; max-age=0";
     localStorage.removeItem("speakintel-username");
     localStorage.removeItem("speakintel-avatar");
     

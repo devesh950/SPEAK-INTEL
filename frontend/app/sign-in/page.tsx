@@ -46,6 +46,30 @@ function SignInContent() {
     }
   };
 
+  const handleQuickDemoLogin = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const result = await signIn("credentials", {
+        email: "demo@speakintel.com",
+        password: "demo-password",
+        redirect: false,
+        callbackUrl: "/dashboard",
+      });
+
+      if (result?.error) {
+        setError("Demo login failed.");
+      } else {
+        document.cookie = "speakintel-demo-session=true; path=/; max-age=86400";
+        window.location.href = "/dashboard";
+      }
+    } catch (err) {
+      setError("Demo login failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex relative overflow-hidden">
       {/* Animated Background */}
@@ -217,6 +241,17 @@ function SignInContent() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
                 <span className="relative z-10">{loading ? "Signing in..." : "Continue with Google"}</span>
+              </motion.button>
+
+              {/* Quick Demo Bypass Button */}
+              <motion.button
+                onClick={handleQuickDemoLogin}
+                disabled={loading}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full mt-3 flex items-center justify-center gap-2 py-3.5 px-5 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all text-sm font-semibold text-primary-light cursor-pointer shadow-lg shadow-black/5"
+              >
+                ⚡ Quick Demo Bypass
               </motion.button>
 
               {/* Divider */}

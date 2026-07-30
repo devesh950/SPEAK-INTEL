@@ -237,7 +237,7 @@ export default function ConversationPage() {
 
   const recognitionRef = useRef<any>(null);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voiceEngine, setVoiceEngine] = useState<"system" | "cloud">("system");
+  const [voiceEngine, setVoiceEngine] = useState<"system" | "cloud">("cloud");
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -263,10 +263,14 @@ export default function ConversationPage() {
   ) => {
     try {
       const ctx = ensureAudioContext();
+      console.log("[TTS] AudioContext state:", ctx.state, "Fetching:", url);
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      console.log("[TTS] Fetch OK, content-type:", response.headers.get("content-type"));
       const arrayBuffer = await response.arrayBuffer();
+      console.log("[TTS] Got arrayBuffer, size:", arrayBuffer.byteLength);
       const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      console.log("[TTS] Decoded audio buffer, duration:", audioBuffer.duration, "seconds");
       
       // Stop any currently playing source
       if (currentSourceRef.current) {
@@ -279,13 +283,15 @@ export default function ConversationPage() {
       currentSourceRef.current = source;
       
       source.onended = () => {
+        console.log("[TTS] Audio playback ended");
         currentSourceRef.current = null;
         onEnd();
       };
       
       source.start(0);
+      console.log("[TTS] Audio playback started!");
     } catch (err) {
-      console.warn("Web Audio API playback failed:", err);
+      console.warn("[TTS] Web Audio API playback failed:", err);
       onError();
     }
   }, [ensureAudioContext]);
@@ -460,12 +466,12 @@ export default function ConversationPage() {
 
       const textToSpeak = chunks[chunkIndex].trim();
 
-      // Unified 4.5-second safety fallback timeout. If ANY path hangs (cloud or system), recover and skip!
+      // 15-second safety timeout (Render free-tier can be slow)
       fallbackTimeout = setTimeout(() => {
         console.warn("TTS safety timeout triggered. Skipping stuck chunk.");
         chunkIndex++;
         speakNextChunk();
-      }, 4500);
+      }, 15000);
 
       if (voiceEngine === "cloud") {
         // Use Web Audio API to play backend edge-tts MP3 (bypasses autoplay restrictions)

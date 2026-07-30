@@ -3,6 +3,16 @@ import Google from "next-auth/providers/google";
 
 import Credentials from "next-auth/providers/credentials";
 
+// Sanitize environment variables to remove any accidental trailing newlines/whitespace (common when pasting into Vercel dashboard)
+if (process.env.NEXTAUTH_URL) process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL.trim();
+if (process.env.AUTH_URL) process.env.AUTH_URL = process.env.AUTH_URL.trim();
+if (process.env.AUTH_SECRET) process.env.AUTH_SECRET = process.env.AUTH_SECRET.trim();
+if (process.env.NEXTAUTH_SECRET) process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET.trim();
+if (process.env.GOOGLE_CLIENT_ID) process.env.GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID.trim();
+if (process.env.GOOGLE_CLIENT_SECRET) process.env.GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET.trim();
+if (process.env.AUTH_GOOGLE_ID) process.env.AUTH_GOOGLE_ID = process.env.AUTH_GOOGLE_ID.trim();
+if (process.env.AUTH_GOOGLE_SECRET) process.env.AUTH_GOOGLE_SECRET = process.env.AUTH_GOOGLE_SECRET.trim();
+
 // Dynamic fallbacks for NextAuth v5 Edge/Serverless runtime configurations
 if (!process.env.AUTH_SECRET) {
   process.env.AUTH_SECRET = process.env.NEXTAUTH_SECRET || "speakintel_default_secret_fallback_key_2026";
@@ -12,6 +22,8 @@ if (!process.env.AUTH_TRUST_HOST) {
 }
 if (!process.env.AUTH_URL && !process.env.NEXTAUTH_URL) {
   process.env.AUTH_URL = "https://speak-intel.vercel.app";
+} else if (process.env.NEXTAUTH_URL) {
+  process.env.AUTH_URL = process.env.NEXTAUTH_URL;
 }
 if (!process.env.AUTH_GOOGLE_ID && process.env.GOOGLE_CLIENT_ID) {
   process.env.AUTH_GOOGLE_ID = process.env.GOOGLE_CLIENT_ID;

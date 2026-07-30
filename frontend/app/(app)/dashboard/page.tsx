@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { getProgressStats, resetProgressStats, UserStats } from "@/lib/progress";
+import { getProgressStats, resetProgressStats, getRecentActivities, UserStats, RecentActivity } from "@/lib/progress";
 import {
   Mic,
   Briefcase,
@@ -144,36 +144,6 @@ const quickActions = [
   },
 ];
 
-const recentActivity = [
-  {
-    type: "conversation",
-    title: "General Conversation",
-    score: 7.5,
-    duration: "12 min",
-    time: "2 hours ago",
-  },
-  {
-    type: "interview",
-    title: "Software Engineer Interview",
-    score: 8.2,
-    duration: "25 min",
-    time: "Yesterday",
-  },
-  {
-    type: "challenge",
-    title: "Introduce Yourself",
-    score: 9.0,
-    duration: "5 min",
-    time: "Yesterday",
-  },
-  {
-    type: "grammar",
-    title: "Grammar Practice",
-    score: 6.8,
-    duration: "8 min",
-    time: "2 days ago",
-  },
-];
 
 // ============================================
 // DASHBOARD PAGE
@@ -184,6 +154,7 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState("Learner");
   const [isFirstTime, setIsFirstTime] = useState(false);
   const [progress, setProgress] = useState<UserStats | null>(null);
+  const [activitiesList, setActivitiesList] = useState<RecentActivity[]>([]);
 
   useEffect(() => {
     // Sync username
@@ -205,8 +176,9 @@ export default function DashboardPage() {
       setIsFirstTime(false);
     }
 
-    // Load progress metrics
+    // Load progress metrics & activities
     setProgress(getProgressStats());
+    setActivitiesList(getRecentActivities());
   }, [session]);
 
   const statsList = [
@@ -363,14 +335,14 @@ export default function DashboardPage() {
           <h2 className="text-lg font-semibold mb-6">Communication Score</h2>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
             {[
-              { label: "Grammar", score: 78, color: "#7c3aed" },
-              { label: "Fluency", score: 72, color: "#06b6d4" },
-              { label: "Vocabulary", score: 65, color: "#ec4899" },
-              { label: "Confidence", score: 80, color: "#10b981" },
-              { label: "Pronunciation", score: 68, color: "#f59e0b" },
-              { label: "Speaking Speed", score: 75, color: "#6366f1" },
-              { label: "Listening", score: 82, color: "#8b5cf6" },
-              { label: "Overall", score: 74, color: "#14b8a6" },
+              { label: "Grammar", score: progress?.detailedScores?.grammar || 0, color: "#7c3aed" },
+              { label: "Fluency", score: progress?.detailedScores?.fluency || 0, color: "#06b6d4" },
+              { label: "Vocabulary", score: progress?.detailedScores?.vocabulary || 0, color: "#ec4899" },
+              { label: "Confidence", score: progress?.detailedScores?.confidence || 0, color: "#10b981" },
+              { label: "Pronunciation", score: progress?.detailedScores?.pronunciation || 0, color: "#f59e0b" },
+              { label: "Speaking Speed", score: progress?.detailedScores?.speakingSpeed || 0, color: "#6366f1" },
+              { label: "Listening", score: progress?.detailedScores?.listening || 0, color: "#8b5cf6" },
+              { label: "Overall", score: progress?.detailedScores?.overall || 0, color: "#14b8a6" },
             ].map((item) => (
               <div key={item.label} className="text-center">
                 <div
@@ -382,7 +354,7 @@ export default function DashboardPage() {
                     } as React.CSSProperties
                   }
                 >
-                  <span className="text-sm font-bold">{item.score}</span>
+                  <span className="text-sm font-bold">{item.score || "—"}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">{item.label}</p>
               </div>
@@ -395,73 +367,97 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="glass-card p-6"
+          className="glass-card p-6 flex flex-col h-full"
         >
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 flex-shrink-0">
             <h2 className="text-lg font-semibold">Recent Activity</h2>
-            <Link
-              href="/progress"
-              className="text-xs text-primary-light hover:underline flex items-center gap-1"
-            >
-              View All <ArrowRight className="w-3 h-3" />
-            </Link>
+            {activitiesList.length > 0 && (
+              <Link
+                href="/progress"
+                className="text-xs text-primary-light hover:underline flex items-center gap-1"
+              >
+                View All <ArrowRight className="w-3 h-3" />
+              </Link>
+            )}
           </div>
 
-          <div className="space-y-3">
-            {recentActivity.map((activity, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 + index * 0.1 }}
-                className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors"
-              >
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    activity.type === "conversation"
-                      ? "bg-purple-500/15 text-purple-400"
-                      : activity.type === "interview"
-                      ? "bg-cyan-500/15 text-cyan-400"
-                      : activity.type === "challenge"
-                      ? "bg-amber-500/15 text-amber-400"
-                      : "bg-pink-500/15 text-pink-400"
-                  }`}
+          <div className="flex-1 flex flex-col justify-center">
+            {activitiesList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-muted-foreground">
+                  <Mic className="w-6 h-6 animate-pulse text-primary-light" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">No practice history yet</p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-[280px]">
+                    Start your first conversation with your AI English coach to see your scores update!
+                  </p>
+                </div>
+                <Link
+                  href="/conversation"
+                  className="text-xs font-semibold px-5 py-2.5 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
                 >
-                  {activity.type === "conversation" ? (
-                    <Mic className="w-5 h-5" />
-                  ) : activity.type === "interview" ? (
-                    <Briefcase className="w-5 h-5" />
-                  ) : activity.type === "challenge" ? (
-                    <Zap className="w-5 h-5" />
-                  ) : (
-                    <PenTool className="w-5 h-5" />
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {activity.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {activity.duration} · {activity.time}
-                  </p>
-                </div>
-
-                <div className="text-right flex-shrink-0">
-                  <p
-                    className={`text-sm font-bold ${
-                      activity.score >= 8
-                        ? "text-emerald-400"
-                        : activity.score >= 6
-                        ? "text-amber-400"
-                        : "text-red-400"
-                    }`}
+                  Start Speaking
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3 w-full">
+                {activitiesList.map((activity, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 + index * 0.1 }}
+                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors"
                   >
-                    {activity.score}/10
-                  </p>
-                </div>
-              </motion.div>
-            ))}
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        activity.type === "conversation"
+                          ? "bg-purple-500/15 text-purple-400"
+                          : activity.type === "interview"
+                          ? "bg-cyan-500/15 text-cyan-400"
+                          : activity.type === "challenge"
+                          ? "bg-amber-500/15 text-amber-400"
+                          : "bg-pink-500/15 text-pink-400"
+                      }`}
+                    >
+                      {activity.type === "conversation" ? (
+                        <Mic className="w-5 h-5" />
+                      ) : activity.type === "interview" ? (
+                        <Briefcase className="w-5 h-5" />
+                      ) : activity.type === "challenge" ? (
+                        <Zap className="w-5 h-5" />
+                      ) : (
+                        <PenTool className="w-5 h-5" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate text-white">
+                        {activity.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {activity.duration} · {activity.time}
+                      </p>
+                    </div>
+
+                    <div className="text-right flex-shrink-0">
+                      <p
+                        className={`text-sm font-bold ${
+                          activity.score >= 8
+                            ? "text-emerald-400"
+                            : activity.score >= 6
+                            ? "text-amber-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {activity.score}/10
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

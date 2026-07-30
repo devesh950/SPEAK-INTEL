@@ -8,6 +8,9 @@ if (!process.env.AUTH_SECRET) {
 if (!process.env.AUTH_TRUST_HOST) {
   process.env.AUTH_TRUST_HOST = "true";
 }
+if (!process.env.AUTH_URL && !process.env.NEXTAUTH_URL) {
+  process.env.AUTH_URL = "https://speak-intel.vercel.app";
+}
 if (!process.env.AUTH_GOOGLE_ID && process.env.GOOGLE_CLIENT_ID) {
   process.env.AUTH_GOOGLE_ID = process.env.GOOGLE_CLIENT_ID;
 }
@@ -24,6 +27,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   pages: {
     signIn: "/sign-in",
+    error: "/sign-in",
   },
   callbacks: {
     async session({ session, token }) {
@@ -43,5 +47,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
   },
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "speakintel_default_secret_fallback_key_2026",
-  debug: false,
+  trustHost: true,
+  debug: true,
 });

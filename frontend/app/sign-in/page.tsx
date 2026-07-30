@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Mic, AlertCircle, Sparkles, Globe, Brain, MessageCircle, Volume2, Star } from "lucide-react";
 import { signIn } from "next-auth/react";
 
@@ -13,9 +14,26 @@ const features = [
   { icon: Globe, label: "Interview Prep", desc: "Ace your next job interview" },
 ];
 
-export default function SignInPage() {
+const errorMessages: Record<string, string> = {
+  OAuthSignin: "Could not start Google sign-in. Check OAuth configuration.",
+  OAuthCallback: "Google sign-in callback failed. Check redirect URI in Google Cloud Console.",
+  OAuthAccountNotLinked: "This email is already linked to another account.",
+  Configuration: "Server configuration error. Contact support.",
+  Default: "An authentication error occurred. Please try again.",
+};
+
+function SignInContent() {
+  const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Check for NextAuth error in URL query params
+  useEffect(() => {
+    const urlError = searchParams.get("error");
+    if (urlError) {
+      setError(errorMessages[urlError] || `Auth error: ${urlError}`);
+    }
+  }, [searchParams]);
 
   const handleGoogleLogin = async () => {
     try {
@@ -246,5 +264,17 @@ export default function SignInPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#09090b]">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
   );
 }

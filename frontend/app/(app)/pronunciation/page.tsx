@@ -32,14 +32,20 @@ const sentences = [
   },
 ];
 
-import { getProgressStats } from "@/lib/progress";
+import { getProgressStats, updateRealtimeProgress, updateDetailedScores, addRecentActivity } from "@/lib/progress";
+import { useRef } from "react";
 
 export default function PronunciationPage() {
   const [currentSentence, setCurrentSentence] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [pronunciationScore, setPronunciationScore] = useState(0);
+  
+  const [computedScore, setComputedScore] = useState(0);
+  const [wordResults, setWordResults] = useState<{ word: string; correct: boolean }[]>([]);
+  const recognitionRef = useRef<any>(null);
 
+  // Sync general progress stats on mount
   useEffect(() => {
     const stats = getProgressStats();
     setPronunciationScore(stats.detailedScores?.pronunciation || 0);
@@ -54,18 +60,118 @@ export default function PronunciationPage() {
 
   const sentence = sentences[currentSentence];
 
+  const evaluatePronunciation = (spoken: string) => {
+    const targetText = sentences[currentSentence].text;
+    const cleanWord = (w: string) => w.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").trim();
+
+    const targetWords = targetText.split(/\s+/).map(cleanWord).filter(Boolean);
+    const spokenWords = spoken.split(/\s+/).map(cleanWord).filter(Boolean);
+
+    let correctCount = 0;
+    const results = targetText.split(/\s+/).map((originalWord) => {
+      const cleaned = cleanWord(originalWord);
+      // Check if word exists in spoken phrase
+      const isCorrect = spokenWords.includes(cleaned);
+      if (isCorrect) {
+        correctCount++;
+      }
+      return { word: originalWord, correct: isCorrect };
+    });
+
+    const score = targetWords.length > 0 ? Math.round((correctCount / targetWords.length) * 100) : 0;
+    
+    setComputedScore(score);
+    setWordResults(results);
+    setShowResult(true);
+
+    if (score > 0) {
+      updateRealtimeProgress("practice", 1);
+      updateRealtimeProgress("session");
+      updateRealtimeProgress("words", Math.min(5, Math.max(1, Math.round(targetWords.length / 3))));
+
+      updateDetailedScores({
+        pronunciation: score,
+        grammar: undefined, // don't overwrite grammar
+      });
+      
+      addRecentActivity(
+        "conversation",
+        `Pronunciation Practice`,
+        Number((score / 10).toFixed(1)),
+        "1 min"
+      );
+
+      // Refresh top badges
+      const stats = getProgressStats();
+      setPronunciationScore(stats.detailedScores?.pronunciation || score);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const rec = new SpeechRecognition();
+        rec.continuous = false;
+        rec.interimResults = false;
+        rec.lang = "en-US";
+
+        rec.onstart = () => {
+          setIsRecording(true);
+          setShowResult(false);
+        };
+
+        rec.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          if (transcript) {
+            evaluatePronunciation(transcript);
+          }
+        };
+
+        rec.onerror = (err: any) => {
+          console.error("Speech recognition error:", err);
+          setIsRecording(false);
+          // Fallback evaluation if microphone is empty
+          evaluatePronunciation("");
+        };
+
+        rec.onend = () => {
+          setIsRecording(false);
+        };
+
+        recognitionRef.current = rec;
+      }
+    }
+  }, [currentSentence]);
+
   const handleRecord = () => {
     if (isRecording) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
       setIsRecording(false);
-      setShowResult(true);
     } else {
-      setIsRecording(true);
-      setShowResult(false);
-      // Simulate stopping after 4 seconds
-      setTimeout(() => {
-        setIsRecording(false);
-        setShowResult(true);
-      }, 4000);
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {
+          console.warn("Could not start speech recognition:", e);
+          setIsRecording(true);
+          setTimeout(() => {
+            setIsRecording(false);
+            evaluatePronunciation("");
+          }, 3500);
+        }
+      } else {
+        setIsRecording(true);
+        setTimeout(() => {
+          setIsRecording(false);
+          evaluatePronunciation("");
+        }, 3500);
+      }
     }
   };
 
@@ -151,29 +257,27 @@ export default function PronunciationPage() {
             className="mt-8 space-y-4"
           >
             {/* Score */}
-            <div className="flex justify-center">
-              <div className="w-24 h-24 rounded-full gradient-primary flex items-center justify-center">
-                <span className="text-3xl font-bold">82</span>
+            <div className="flex justify-center flex-col items-center gap-1">
+              <div className="w-24 h-24 rounded-full gradient-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                <span className="text-3xl font-bold text-white">{computedScore}</span>
               </div>
+              <span className="text-xs text-muted-foreground mt-1">Pronunciation Score</span>
             </div>
 
             {/* Word-by-word feedback */}
-            <div className="flex flex-wrap items-center justify-center gap-1 mt-4">
-              {sentence.text.split(" ").map((word, i) => {
-                const isCorrect = Math.random() > 0.3;
-                return (
-                  <span
-                    key={i}
-                    className={`px-2 py-1 rounded text-sm ${
-                      isCorrect
-                        ? "bg-emerald-500/10 text-emerald-400"
-                        : "bg-red-500/10 text-red-400 underline decoration-wavy"
-                    }`}
-                  >
-                    {word}
-                  </span>
-                );
-              })}
+            <div className="flex flex-wrap items-center justify-center gap-1.5 mt-4 max-w-lg mx-auto">
+              {wordResults.map((item, i) => (
+                <span
+                  key={i}
+                  className={`px-2 py-1 rounded-lg text-sm transition-all ${
+                    item.correct
+                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium"
+                      : "bg-red-500/10 text-red-400 underline decoration-wavy border border-red-500/20"
+                  }`}
+                >
+                  {item.word}
+                </span>
+              ))}
             </div>
 
             {/* Actions */}

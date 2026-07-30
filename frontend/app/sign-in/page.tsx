@@ -46,29 +46,7 @@ function SignInContent() {
     }
   };
 
-  const handleQuickDemoLogin = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const result = await signIn("credentials", {
-        email: "demo@speakintel.com",
-        password: "demo-password",
-        redirect: false,
-        callbackUrl: "/dashboard",
-      });
 
-      if (result?.error) {
-        setError("Demo login failed.");
-      } else {
-        document.cookie = "speakintel-demo-session=true; path=/; max-age=86400";
-        window.location.href = "/dashboard";
-      }
-    } catch (err) {
-      setError("Demo login failed.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen flex relative overflow-hidden">
@@ -243,16 +221,7 @@ function SignInContent() {
                 <span className="relative z-10">{loading ? "Signing in..." : "Continue with Google"}</span>
               </motion.button>
 
-              {/* Quick Demo Bypass Button */}
-              <motion.button
-                onClick={handleQuickDemoLogin}
-                disabled={loading}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full mt-3 flex items-center justify-center gap-2 py-3.5 px-5 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all text-sm font-semibold text-primary-light cursor-pointer shadow-lg shadow-black/5"
-              >
-                ⚡ Quick Demo Bypass
-              </motion.button>
+
 
               {/* Divider */}
               <div className="flex items-center gap-3 my-6">

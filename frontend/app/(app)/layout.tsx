@@ -22,6 +22,7 @@ import {
   LogOut,
   ChevronLeft,
   Bell,
+  ShieldAlert,
 } from "lucide-react";
 
 const navItems = [
@@ -36,6 +37,7 @@ const navItems = [
   { icon: BarChart3, label: "Progress", href: "/progress" },
   { icon: Trophy, label: "Leaderboard", href: "/leaderboard" },
   { icon: Settings, label: "Settings", href: "/settings" },
+  { icon: ShieldAlert, label: "Admin Console", href: "/admin" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -74,12 +76,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [editImage, setEditImage] = useState("");
 
   useEffect(() => {
-    const cookies = document.cookie.split(";").map((c) => c.trim());
-    const hasDemoSession = cookies.some((c) => c.startsWith("speakintel-demo-session="));
-
     if (status === "loading") return;
 
-    if (status === "authenticated" || hasDemoSession) {
+    if (status === "authenticated") {
       setAuthorized(true);
     } else {
       router.push(`/sign-in?callbackUrl=${encodeURIComponent(pathname)}`);
@@ -91,6 +90,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (session?.user) {
       setProfileName(session.user.name || session.user.email?.split("@")[0] || "User");
       setProfileImage(session.user.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=User");
+      
+      // Sync Google profile on login
+      if (session.user.email) {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/users/sync`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: session.user.email,
+            name: session.user.name,
+            image: session.user.image,
+            github: localStorage.getItem("speakintel-github") || "",
+            instagram: localStorage.getItem("speakintel-instagram") || "",
+            linkedin: localStorage.getItem("speakintel-linkedin") || ""
+          })
+        }).catch(err => console.error("Error syncing profile:", err));
+      }
     } else {
       // Fallback localstorage sync for demo flow
       const cachedName = localStorage.getItem("speakintel-username") || "Demo User";
@@ -130,6 +145,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setInstagramUrl(editInstagram);
     setLinkedinUrl(editLinkedin);
 
+    // Sync profile to database
+    if (session?.user?.email) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/users/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: session.user.email,
+          name: editName,
+          image: editImage,
+          github: editGithub,
+          instagram: editInstagram,
+          linkedin: editLinkedin
+        })
+      }).catch(err => console.error("Profile db sync failed:", err));
+    }
+
     // If NextAuth session is loaded, try updating it dynamically
     if (session) {
       try {
@@ -146,8 +177,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const handleSignOutClick = async () => {
-    // Clear custom bypass cookies
-    document.cookie = "speakintel-demo-session=; path=/; max-age=0";
     localStorage.removeItem("speakintel-username");
     localStorage.removeItem("speakintel-avatar");
     
@@ -193,8 +222,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Nav Items */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
+          {navItems
+            .filter((item) => item.href !== "/admin" || session?.user?.email === "devshyadav8023@gmail.com")
+            .map((item) => {
+              const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
@@ -365,8 +396,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
 
               <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-                {navItems.map((item) => {
-                  const isActive = pathname === item.href;
+                {navItems
+                  .filter((item) => item.href !== "/admin" || session?.user?.email === "devshyadav8023@gmail.com")
+                  .map((item) => {
+                    const isActive = pathname === item.href;
                   return (
                     <Link
                       key={item.href}

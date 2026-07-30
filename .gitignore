@@ -6,10 +6,10 @@ frontend/build/
 
 # Python build and dependencies
 backend/node_modules/
-backend/__pycache__/
-backend/*.pyc
-backend/*.pyo
-backend/*.pyd
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 backend/.pytest_cache/
 backend/.venv/
 backend/env/

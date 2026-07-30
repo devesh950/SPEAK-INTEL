@@ -9,16 +9,22 @@ from contextlib import asynccontextmanager
 import json
 
 from app.config import settings
-from app.routers import conversations, interviews, vocabulary, progress, admin
+from app.routers import conversations, interviews, vocabulary, progress, admin, users
 from app.websocket.voice_handler import VoiceHandler
+from app.db import db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application startup and shutdown events."""
-    print("🚀 SpeakIntel AI Backend starting...")
+    print("SpeakIntel AI Backend starting...")
+    await db.connect()
     yield
-    print("👋 SpeakIntel AI Backend shutting down...")
+    try:
+        await db.disconnect()
+    except Exception:
+        pass
+    print("SpeakIntel AI Backend shutting down...")
 
 
 app = FastAPI(
@@ -43,6 +49,7 @@ app.include_router(interviews.router, prefix="/api/interviews", tags=["Interview
 app.include_router(vocabulary.router, prefix="/api/vocabulary", tags=["Vocabulary"])
 app.include_router(progress.router, prefix="/api/progress", tags=["Progress"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(users.router, prefix="/api/users", tags=["Users"])
 
 
 @app.get("/")

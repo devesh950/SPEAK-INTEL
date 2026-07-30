@@ -596,7 +596,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8">{children}</main>
       </div>
 
       {/* Profile Edit Modal */}
@@ -746,7 +746,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 glass-strong border-t border-border">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-background border-t border-border shadow-lg">
         <div className="flex items-center justify-around py-2">
           {navItems.slice(0, 5).map((item) => {
             const isActive = pathname === item.href;

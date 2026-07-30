@@ -34,7 +34,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  const isAdmin = session?.user?.email === "devshyadav8023@gmail.com";
+  const isAdmin = session?.user?.email === "deveshyadav8023@gmail.com";
 
   const fetchUsers = async () => {
     if (!isAdmin) return;

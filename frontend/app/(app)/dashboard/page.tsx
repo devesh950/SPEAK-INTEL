@@ -248,7 +248,7 @@ export default function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
       >
         <h1 className="text-2xl sm:text-3xl font-bold">
-          {isFirstTime ? `Welcome, ${userName}! 👋` : `Welcome back, ${userName}! 👋`}
+          {`Welcome, ${userName}! 👋`}
         </h1>
         <p className="text-muted-foreground mt-1">
           {isFirstTime ? "Let's start your English learning journey today!" : "Here's your learning progress"}

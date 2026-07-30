@@ -223,7 +223,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Nav Items */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navItems
-            .filter((item) => item.href !== "/admin" || session?.user?.email === "devshyadav8023@gmail.com")
+            .filter((item) => item.href !== "/admin" || session?.user?.email === "deveshyadav8023@gmail.com")
             .map((item) => {
               const isActive = pathname === item.href;
             return (
@@ -397,7 +397,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
               <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
                 {navItems
-                  .filter((item) => item.href !== "/admin" || session?.user?.email === "devshyadav8023@gmail.com")
+                  .filter((item) => item.href !== "/admin" || session?.user?.email === "deveshyadav8023@gmail.com")
                   .map((item) => {
                     const isActive = pathname === item.href;
                   return (

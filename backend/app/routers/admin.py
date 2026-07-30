@@ -9,7 +9,7 @@ router = APIRouter()
 @router.get("/users")
 async def list_users(x_admin_email: str = Header(None)):
     """List all users (admin only)."""
-    if x_admin_email != "devshyadav8023@gmail.com":
+    if x_admin_email != "deveshyadav8023@gmail.com":
         raise HTTPException(status_code=403, detail="Unauthorized access. Admin only.")
         
     try:
@@ -41,7 +41,7 @@ async def list_users(x_admin_email: str = Header(None)):
 @router.get("/analytics")
 async def get_analytics(x_admin_email: str = Header(None)):
     """Get platform analytics (admin only)."""
-    if x_admin_email != "devshyadav8023@gmail.com":
+    if x_admin_email != "deveshyadav8023@gmail.com":
         raise HTTPException(status_code=403, detail="Unauthorized access. Admin only.")
         
     try:
@@ -59,6 +59,6 @@ async def get_analytics(x_admin_email: str = Header(None)):
 @router.get("/subscriptions")
 async def list_subscriptions(x_admin_email: str = Header(None)):
     """List all subscriptions (admin only)."""
-    if x_admin_email != "devshyadav8023@gmail.com":
+    if x_admin_email != "deveshyadav8023@gmail.com":
         raise HTTPException(status_code=403, detail="Unauthorized access. Admin only.")
     return {"subscriptions": [], "total": 0}

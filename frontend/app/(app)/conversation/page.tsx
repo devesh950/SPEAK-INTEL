@@ -412,6 +412,7 @@ export default function ConversationPage() {
     
     setIsPaused(false);
     setState("speaking");
+    stateRef.current = "speaking"; // Sync ref IMMEDIATELY - useEffect runs too late!
 
     // Find the best voice (prioritize local offline voices to prevent silent remote server errors)
     const englishVoices = voices ? voices.filter(

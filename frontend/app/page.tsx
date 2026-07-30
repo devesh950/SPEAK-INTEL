@@ -55,7 +55,7 @@ function Navbar() {
 
           {/* Desktop Links */}
           <div className="hidden md:flex items-center gap-8">
-            {["Features", "How It Works", "Pricing", "FAQ"].map((item) => (
+            {["Features", "How It Works", "Free Access", "FAQ"].map((item) => (
               <a
                 key={item}
                 href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
@@ -99,7 +99,7 @@ function Navbar() {
             className="md:hidden glass-strong border-t border-white/5"
           >
             <div className="px-4 py-4 space-y-3">
-              {["Features", "How It Works", "Pricing", "FAQ"].map((item) => (
+              {["Features", "How It Works", "Free Access", "FAQ"].map((item) => (
                 <a
                   key={item}
                   href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
@@ -532,66 +532,21 @@ function TestimonialsSection() {
 }
 
 // ============================================
-// PRICING
+// FREE ACCESS & SUPPORT
 // ============================================
 
-const plans = [
-  {
-    name: "Free",
-    price: 0,
-    period: "forever",
-    description: "Perfect for getting started",
-    features: [
-      "5 AI conversations/day",
-      "Basic grammar feedback",
-      "3 roleplay modes",
-      "Daily challenge",
-      "Basic progress tracking",
-    ],
-    highlighted: false,
-    cta: "Get Started",
-  },
-  {
-    name: "Pro",
-    price: 499,
-    period: "/month",
-    description: "For serious learners",
-    features: [
-      "Unlimited AI conversations",
-      "All 15 roleplay modes",
-      "Mock interviews (all roles)",
-      "Advanced pronunciation analysis",
-      "Vocabulary notebook",
-      "Detailed analytics",
-      "PDF progress reports",
-      "Priority support",
-    ],
-    highlighted: true,
-    cta: "Start Pro Trial",
-  },
-  {
-    name: "Enterprise",
-    price: 1999,
-    period: "/month",
-    description: "For teams & institutions",
-    features: [
-      "Everything in Pro",
-      "Resume-based interviews",
-      "Personal AI coach",
-      "Weekly AI reports",
-      "Team management",
-      "Custom roleplay scenarios",
-      "API access",
-      "Dedicated support",
-    ],
-    highlighted: false,
-    cta: "Contact Sales",
-  },
+const freeFeatures = [
+  "Unlimited AI conversations with immediate audio playback",
+  "All 15 roleplay scenarios (Airport, Restaurant, Job Interview, etc.)",
+  "Realistic mock interviews with instant performance grading",
+  "Advanced pronunciation analyzer with phoneme-level checks",
+  "Grammar trainer with detailed feedback & rules lookup",
+  "Personalized vocabulary notebook & dashboard analytics",
 ];
 
 function PricingSection() {
   return (
-    <section id="pricing" className="py-24 relative">
+    <section id="free-access" className="py-24 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/[0.02] to-transparent" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <motion.div
@@ -601,77 +556,82 @@ function PricingSection() {
           className="text-center mb-16"
         >
           <span className="text-sm font-medium text-primary-light uppercase tracking-wider">
-            Pricing
+            Free Access
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold mt-3 mb-4">
-            Simple, Transparent{" "}
-            <span className="gradient-text">Pricing</span>
+            Completely <span className="gradient-text">Free Forever</span>
           </h2>
           <p className="text-muted-foreground">
-            Start for free. Upgrade when you&apos;re ready.
+            No subscriptions. No credit cards. Get unlimited access to all features.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {plans.map((plan, index) => (
-            <motion.div
-              key={plan.name}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              className={`relative glass-card p-8 flex flex-col ${
-                plan.highlighted
-                  ? "border-primary/40 scale-105 shadow-2xl shadow-primary/10"
-                  : ""
-              }`}
-            >
-              {plan.highlighted && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full gradient-primary text-xs font-semibold">
-                  Most Popular
-                </div>
-              )}
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="relative glass-card p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 md:gap-12 border border-primary/20 shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden"
+          >
+            {/* Glowing border decoration */}
+            <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-primary/25 to-cyan-500/15 blur-lg opacity-40 -z-10" />
 
-              <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {plan.description}
-              </p>
-
-              <div className="mb-6">
-                <span className="text-4xl font-bold">
-                  {plan.price === 0 ? "Free" : `₹${plan.price}`}
+            <div className="flex-1 space-y-6">
+              <div>
+                <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-3">
+                  Unlimited Access
                 </span>
-                {plan.price > 0 && (
-                  <span className="text-muted-foreground text-sm">
-                    {plan.period}
-                  </span>
-                )}
+                <h3 className="text-2xl font-bold text-white">All Premium Features Included</h3>
+                <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                  Start practicing speaking, interview preparation, roleplay dialogue scenarios, and advanced pronunciation grading entirely for free.
+                </p>
               </div>
 
-              <ul className="space-y-3 mb-8 flex-1">
-                {plan.features.map((feature) => (
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {freeFeatures.map((feature) => (
                   <li
                     key={feature}
-                    className="flex items-start gap-2 text-sm text-muted-foreground"
+                    className="flex items-start gap-2.5 text-sm text-muted-foreground"
                   >
-                    <Check className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                    {feature}
+                    <Check className="w-4.5 h-4.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                    <span>{feature}</span>
                   </li>
                 ))}
               </ul>
 
+              <div className="border-t border-white/5 pt-6 space-y-4">
+                <div>
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">For support and help:</h4>
+                  <a 
+                    href="https://instagram.com/thesiddharthas" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2.5 px-4.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:border-pink-500/35 text-sm font-semibold text-white/90 hover:text-white transition-all group/inst"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4.5 h-4.5 text-pink-500 group-hover/inst:scale-115 transition-all">
+                      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+                      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                    </svg>
+                    <span>Connect with @thesiddharthas</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full md:w-72 flex flex-col items-center justify-center p-6 bg-white/[0.02] border border-white/[0.05] rounded-2xl text-center flex-shrink-0">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Practice Plan</span>
+              <h2 className="text-5xl font-extrabold text-white mt-3">Free</h2>
+              <p className="text-xs text-muted-foreground mt-2">No payment required. Ever.</p>
+              
               <Link
                 href="/sign-in"
-                className={`text-center text-sm font-semibold py-3 rounded-xl transition-all ${
-                  plan.highlighted
-                    ? "btn-primary"
-                    : "btn-secondary"
-                }`}
+                className="w-full mt-6 text-center text-sm font-bold py-3.5 px-6 rounded-xl btn-primary shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all cursor-pointer"
               >
-                {plan.cta}
+                Get Started Now
               </Link>
-            </motion.div>
-          ))}
+            </div>
+          </motion.div>
         </div>
       </div>
     </section>
@@ -840,7 +800,7 @@ function Footer() {
           <div>
             <h4 className="text-sm font-semibold mb-4">Product</h4>
             <ul className="space-y-2">
-              {["Features", "Pricing", "Interview Practice", "Roleplay Modes"].map(
+              {["Features", "Free Access", "Interview Practice", "Roleplay Modes"].map(
                 (item) => (
                   <li key={item}>
                     <a

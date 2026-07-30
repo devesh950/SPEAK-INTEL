@@ -56,8 +56,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [profileImage, setProfileImage] = useState("");
   const [githubUrl, setGithubUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
   const [editGithub, setEditGithub] = useState("");
   const [editInstagram, setEditInstagram] = useState("");
+  const [editLinkedin, setEditLinkedin] = useState("");
 
   const presetAvatars = [
     "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
@@ -99,6 +101,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // Load social links
     setGithubUrl(localStorage.getItem("speakintel-github") || "");
     setInstagramUrl(localStorage.getItem("speakintel-instagram") || "");
+    setLinkedinUrl(localStorage.getItem("speakintel-linkedin") || "");
   }, [session]);
 
   const handleOpenEditProfile = () => {
@@ -106,6 +109,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setEditImage(profileImage);
     setEditGithub(githubUrl);
     setEditInstagram(instagramUrl);
+    setEditLinkedin(linkedinUrl);
     setProfileModalOpen(true);
     setDropdownOpen(false);
   };
@@ -118,11 +122,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     localStorage.setItem("speakintel-avatar", editImage);
     localStorage.setItem("speakintel-github", editGithub);
     localStorage.setItem("speakintel-instagram", editInstagram);
+    localStorage.setItem("speakintel-linkedin", editLinkedin);
     
     setProfileName(editName);
     setProfileImage(editImage);
     setGithubUrl(editGithub);
     setInstagramUrl(editInstagram);
+    setLinkedinUrl(editLinkedin);
 
     // If NextAuth session is loaded, try updating it dynamically
     if (session) {
@@ -245,7 +251,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <p className="text-sm font-medium truncate text-white">{profileName}</p>
                 <p className="text-xs text-muted-foreground truncate mb-1">{session?.user?.email || "Learner"}</p>
                 {/* Social links row */}
-                {(githubUrl || instagramUrl) && (
+                {(githubUrl || instagramUrl || linkedinUrl) && (
                   <div className="flex gap-1.5 mt-0.5">
                     {githubUrl && (
                       <a
@@ -273,6 +279,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                           <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
                           <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
                           <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                        </svg>
+                      </a>
+                    )}
+                    {linkedinUrl && (
+                      <a
+                        href={linkedinUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 rounded-md bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                        title="LinkedIn Profile"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+                          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+                          <rect width="4" height="12" x="2" y="9" />
+                          <circle cx="4" cy="4" r="2" />
                         </svg>
                       </a>
                     )}
@@ -376,7 +397,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <p className="text-sm font-medium truncate text-white">{profileName}</p>
                     <p className="text-xs text-muted-foreground truncate mb-1">{session?.user?.email || "Learner"}</p>
                     {/* Social links row */}
-                    {(githubUrl || instagramUrl) && (
+                    {(githubUrl || instagramUrl || linkedinUrl) && (
                       <div className="flex gap-1.5 mt-0.5">
                         {githubUrl && (
                           <a
@@ -404,6 +425,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                               <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
                               <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
                               <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                            </svg>
+                          </a>
+                        )}
+                        {linkedinUrl && (
+                          <a
+                            href={linkedinUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 rounded-md bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+                              <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+                              <rect width="4" height="12" x="2" y="9" />
+                              <circle cx="4" cy="4" r="2" />
                             </svg>
                           </a>
                         )}
@@ -473,13 +509,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-12 w-56 rounded-xl border border-border bg-popover p-2 shadow-xl z-40 text-sm"
+                    className="absolute right-0 top-12 w-56 rounded-xl border border-border bg-[#121215] p-2 shadow-xl z-40 text-sm"
                   >
                     <div className="p-3 border-b border-border">
                       <p className="font-semibold text-white truncate">{profileName}</p>
                       <p className="text-xs text-muted-foreground truncate">{session?.user?.email || "Learner"}</p>
                       {/* Social Links Row */}
-                      {(githubUrl || instagramUrl) && (
+                      {(githubUrl || instagramUrl || linkedinUrl) && (
                         <div className="flex gap-2 mt-2">
                           {githubUrl && (
                             <a
@@ -507,6 +543,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
                                 <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
                                 <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                              </svg>
+                            </a>
+                          )}
+                          {linkedinUrl && (
+                            <a
+                              href={linkedinUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1 rounded-md bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                              title="LinkedIn Profile"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+                                <rect width="4" height="12" x="2" y="9" />
+                                <circle cx="4" cy="4" r="2" />
                               </svg>
                             </a>
                           )}
@@ -655,6 +706,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     value={editInstagram}
                     onChange={(e) => setEditInstagram(e.target.value)}
                     placeholder="https://instagram.com/username"
+                    className="w-full px-4 py-2 text-sm rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-primary/50 transition-colors placeholder:text-muted"
+                  />
+                </div>
+
+                {/* LinkedIn URL */}
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    LinkedIn Profile Link (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={editLinkedin}
+                    onChange={(e) => setEditLinkedin(e.target.value)}
+                    placeholder="https://linkedin.com/in/username"
                     className="w-full px-4 py-2 text-sm rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-primary/50 transition-colors placeholder:text-muted"
                   />
                 </div>

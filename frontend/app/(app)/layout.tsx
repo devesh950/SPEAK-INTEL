@@ -88,7 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       
       // Sync Google profile on login
       if (session.user.email) {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/users/sync`, {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://speak-intel-1.onrender.com'}/api/users/sync`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -142,7 +142,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     // Sync profile to database
     if (session?.user?.email) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/users/sync`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://speak-intel-1.onrender.com'}/api/users/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

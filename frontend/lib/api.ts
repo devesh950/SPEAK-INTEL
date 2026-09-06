@@ -1,4 +1,17 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const PRODUCTION_BACKEND_URL = "https://speak-intel-1.onrender.com";
+
+export const API_BASE_URL = (() => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
+  }
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return "http://localhost:8000";
+    }
+  }
+  return PRODUCTION_BACKEND_URL;
+})();
 
 interface FetchOptions extends RequestInit {
   token?: string;

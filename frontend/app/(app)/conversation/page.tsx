@@ -234,6 +234,12 @@ export default function ConversationPage() {
   const [inputText, setInputText] = useState("");
   const [isPaused, setIsPaused] = useState(false);
   const [hasSpokenGreeting, setHasSpokenGreeting] = useState(false);
+  const [handsFreeMode, setHandsFreeMode] = useState(true);
+  const handsFreeModeRef = useRef(true);
+
+  useEffect(() => {
+    handsFreeModeRef.current = handsFreeMode;
+  }, [handsFreeMode]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const recognitionRef = useRef<any>(null);
@@ -325,16 +331,25 @@ export default function ConversationPage() {
   }, [state]);
 
   const startListening = useCallback(() => {
+    if (stateRef.current === "speaking") return;
+    setIsPaused(false);
+    transcriptRef.current = "";
+    accumulatedTranscriptRef.current = "";
+    setLiveTranscript("");
+    setState("listening");
+    stateRef.current = "listening";
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.start();
-        setState("listening");
       } catch (e) {
-        console.warn("Could not start speech recognition:", e);
-        setState("idle");
+        try {
+          recognitionRef.current.stop();
+          setTimeout(() => {
+            try { recognitionRef.current.start(); } catch (err) {}
+          }, 150);
+        } catch (err) {}
       }
-    } else {
-      setState("idle");
     }
   }, []);
 
@@ -442,8 +457,15 @@ export default function ConversationPage() {
     const chunks = sentences.filter((s) => s.trim().length > 0);
 
     if (chunks.length === 0) {
-      setState("idle");
-      if (onEndCallback) onEndCallback();
+      if (handsFreeModeRef.current) {
+        setTimeout(() => {
+          startListening();
+        }, 350);
+      } else {
+        setState("idle");
+        stateRef.current = "idle";
+        if (onEndCallback) onEndCallback();
+      }
       return;
     }
 
@@ -460,9 +482,16 @@ export default function ConversationPage() {
         return; // manually stopped, abort speaking sequence
       }
       if (chunkIndex >= chunks.length) {
-        setState("idle");
         setIsPaused(false);
-        if (onEndCallback) onEndCallback();
+        if (handsFreeModeRef.current) {
+          setTimeout(() => {
+            startListening();
+          }, 350);
+        } else {
+          setState("idle");
+          stateRef.current = "idle";
+          if (onEndCallback) onEndCallback();
+        }
         return;
       }
 
@@ -979,12 +1008,26 @@ export default function ConversationPage() {
               ))}
             </div>
           )}
+          {/* Continuous Two-Way Mode Toggle */}
+          <button
+            onClick={() => setHandsFreeMode(prev => !prev)}
+            className={`mr-2 text-xs px-2.5 py-1 rounded-full border flex items-center gap-1.5 transition-all cursor-pointer ${
+              handsFreeMode
+                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-sm"
+                : "bg-white/5 border-white/10 text-muted-foreground"
+            }`}
+            title="Continuous two-way conversation mode"
+          >
+            <span className={`w-2 h-2 rounded-full ${handsFreeMode ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"}`} />
+            {handsFreeMode ? "Two-Way Voice: ON" : "Two-Way: OFF"}
+          </button>
+
           {/* Voice Engine Toggle */}
           <button
             onClick={() => setVoiceEngine(prev => prev === "system" ? "cloud" : "system")}
             className="mr-2 text-xs px-2 py-1 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-muted-foreground transition-all cursor-pointer"
           >
-            Voice: {voiceEngine === "system" ? "System" : "Cloud (Google)"}
+            Voice: {voiceEngine === "system" ? "System" : "Cloud"}
           </button>
 
           <button

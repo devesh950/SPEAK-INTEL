@@ -220,9 +220,9 @@ class AICoach:
                 "How do you typically handle tight deadlines or sudden changes in priority?",
                 "Where do you see your technical and communication skills evolving over the next two years?"
             ]
-            body = f"{random.choice(interview_openers)}
-
-{random.choice(next_questions)}"
+            opener = random.choice(interview_openers)
+            next_q = random.choice(next_questions)
+            body = f"{opener}\n\n{next_q}"
         elif mode == "roleplay":
             roleplay_responses = [
                 f"That sounds interesting! As your conversation partner in this {role or 'roleplay'} session, I'd love to hear more details.",

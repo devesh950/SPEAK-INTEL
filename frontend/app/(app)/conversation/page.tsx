@@ -554,20 +554,33 @@ export default function ConversationPage() {
     speakNextChunk();
   }, [voices, voiceEngine, playAudioViaWebAPI]);
 
+  const transcriptRef = useRef<string>("");
+  const accumulatedTranscriptRef = useRef<string>("");
+  const silenceTimerRef = useRef<any>(null);
+  const [liveTranscript, setLiveTranscript] = useState<string>("");
+
   // Process user text input (both keyboard & voice)
   const processInput = useCallback(
     async (text: string) => {
-      if (!text.trim()) return;
+      if (!text || !text.trim()) return;
+      const cleanText = text.trim();
+
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      transcriptRef.current = "";
+      accumulatedTranscriptRef.current = "";
+      setLiveTranscript("");
+
+      setState("thinking");
+      stateRef.current = "thinking";
 
       const userMsg: Message = {
         id: Date.now().toString(),
         role: "user",
-        content: text,
+        content: cleanText,
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, userMsg]);
-      // Track session start if first message
       if (messages.length === 0) {
         updateRealtimeProgress("session");
       }
@@ -579,7 +592,7 @@ export default function ConversationPage() {
           content: m.content,
         }));
 
-        const data = await sendMessage(text, apiHistory, "general", undefined, "intermediate");
+        const data = await sendMessage(cleanText, apiHistory, "general", undefined, "intermediate");
 
         const aiMsg: Message = {
           id: (Date.now() + 1).toString(),
@@ -608,14 +621,13 @@ export default function ConversationPage() {
             pronunciation: Math.min(100, Math.max(10, fluencyVal + Math.round(Math.random() * 8 - 4))),
           });
 
-          const wordsCount = text.split(/\s+/).filter(Boolean).length;
+          const wordsCount = cleanText.split(/\s+/).filter(Boolean).length;
           updateRealtimeProgress("words", Math.min(10, Math.max(1, Math.round(wordsCount / 3))));
         }
 
         setMessages((prev) => [...prev, aiMsg]);
-        // Extract only the conversational part (before feedback section)
+        
         let speakContent = data.response;
-        // Remove everything after the feedback emoji or "Feedback:" header
         const feedbackMarkers = ["\u{1F4DD}", "📝", "**Feedback", "Feedback:"];
         for (const marker of feedbackMarkers) {
           const idx = speakContent.indexOf(marker);
@@ -624,27 +636,26 @@ export default function ConversationPage() {
             break;
           }
         }
-        // Also strip any remaining markdown formatting
         speakContent = speakContent.replace(/\*\*/g, "").replace(/\*/g, "").trim();
         if (speakContent.length > 0) {
-          speakText(speakContent, startListening);
+          speakText(speakContent);
         } else {
-          startListening();
+          setState("idle");
+          stateRef.current = "idle";
         }
       } catch (error) {
         console.error("API request failed, fallback to offline AI analysis.", error);
 
-        // Offline smart grammar scanner for a premium feel even if API is slow
-        let corrected = text;
-        let explanation = "Your sentence structure is correct and clear! Good job.";
-        let grammarScore = 9;
+        let corrected = cleanText;
+        let explanation = "Your sentence structure is clear! Keep practicing.";
+        let grammarScore = 8;
 
-        if (text.toLowerCase().includes("excited for join")) {
-          corrected = text.replace(/excited for join/i, "excited to join");
+        if (cleanText.toLowerCase().includes("excited for join")) {
+          corrected = cleanText.replace(/excited for join/i, "excited to join");
           explanation = "Use 'excited to join' (infinitive verb form) instead of 'excited for join'.";
           grammarScore = 6;
-        } else if (text.toLowerCase().includes("helping me to growing")) {
-          corrected = text.replace(/helping me to growing/i, "help me grow");
+        } else if (cleanText.toLowerCase().includes("helping me to growing")) {
+          corrected = cleanText.replace(/helping me to growing/i, "help me grow");
           explanation = "Use the base verb form 'help me grow' instead of 'helping me to growing'.";
           grammarScore = 5;
         }
@@ -652,11 +663,11 @@ export default function ConversationPage() {
         const aiMsg: Message = {
           id: (Date.now() + 1).toString(),
           role: "ai",
-          content: corrected !== text 
-            ? `I heard you! Here is a tip to sound more natural: instead of saying "${text}", you should say "${corrected}".`
-            : `That's a very clear explanation! Keep going. What else would you like to discuss today?`,
-          feedback: corrected !== text ? {
-            original: text,
+          content: corrected !== cleanText 
+            ? `I heard you! Here is a tip to sound more natural: instead of saying "${cleanText}", you can say "${corrected}".`
+            : `Great point! You expressed "${cleanText}" clearly. What else would you like to practice?`,
+          feedback: corrected !== cleanText ? {
+            original: cleanText,
             corrected: corrected,
             explanation: explanation,
           } : undefined,
@@ -681,14 +692,14 @@ export default function ConversationPage() {
           pronunciation: 75,
         });
 
-        const wordsCount = text.split(/\s+/).filter(Boolean).length;
+        const wordsCount = cleanText.split(/\s+/).filter(Boolean).length;
         updateRealtimeProgress("words", Math.min(10, Math.max(1, Math.round(wordsCount / 3))));
 
         setMessages((prev) => [...prev, aiMsg]);
-        speakText(aiMsg.content, startListening);
+        speakText(aiMsg.content);
       }
     },
-    [messages, speakText, startListening]
+    [messages, speakText]
   );
 
   // Initialize Speech Recognition API
@@ -699,40 +710,69 @@ export default function ConversationPage() {
 
       if (SpeechRecognition) {
         const rec = new SpeechRecognition();
-        rec.continuous = false;
-        rec.interimResults = false;
+        rec.continuous = true;
+        rec.interimResults = true;
         rec.lang = "en-US";
 
         rec.onstart = () => {
           setState("listening");
+          stateRef.current = "listening";
         };
 
         rec.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          if (transcript) {
-            processInput(transcript);
+          let interim = "";
+          let final = "";
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const transcriptChunk = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              final += transcriptChunk + " ";
+            } else {
+              interim += transcriptChunk;
+            }
           }
+          if (final) {
+            accumulatedTranscriptRef.current = (accumulatedTranscriptRef.current + " " + final).trim();
+          }
+          const fullCurrent = (accumulatedTranscriptRef.current + " " + interim).trim();
+          if (fullCurrent) {
+            setLiveTranscript(fullCurrent);
+            transcriptRef.current = fullCurrent;
+          }
+
+          // Auto-submit after 1.8s pause in speaking
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = setTimeout(() => {
+            const textToSubmit = transcriptRef.current.trim();
+            if (textToSubmit && stateRef.current === "listening") {
+              transcriptRef.current = "";
+              accumulatedTranscriptRef.current = "";
+              setLiveTranscript("");
+              try { rec.stop(); } catch (e) {}
+              processInput(textToSubmit);
+            }
+          }, 1800);
         };
 
         rec.onerror = (err: any) => {
-          console.error("Speech recognition error:", err);
-          setState("idle");
-          // Notify the user rather than typing simulated sentences
-          const errorContent = err.error === "no-speech"
-            ? "I didn't catch that. Please click the microphone again and speak clearly!"
-            : "Could not access microphone. Please check permissions or type below.";
-          
-          const errorMsg: Message = {
-            id: "err-" + Date.now(),
-            role: "ai",
-            content: errorContent,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, errorMsg]);
+          console.warn("Speech recognition error:", err);
+          if (err.error !== "no-speech") {
+            setState("idle");
+            stateRef.current = "idle";
+          }
         };
 
         rec.onend = () => {
-          setState((curr) => (curr === "listening" ? "idle" : curr));
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+          const pendingText = transcriptRef.current.trim();
+          if (pendingText && stateRef.current === "listening") {
+            transcriptRef.current = "";
+            accumulatedTranscriptRef.current = "";
+            setLiveTranscript("");
+            processInput(pendingText);
+          } else if (stateRef.current === "listening") {
+            setState("idle");
+            stateRef.current = "idle";
+          }
         };
 
         recognitionRef.current = rec;
@@ -743,12 +783,17 @@ export default function ConversationPage() {
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     };
   }, [processInput]);
 
   const handleMicClick = useCallback(() => {
     if (state === "idle") {
       setIsPaused(false);
+      transcriptRef.current = "";
+      accumulatedTranscriptRef.current = "";
+      setLiveTranscript("");
+
       // Unlock AudioContext on user gesture (stays unlocked permanently)
       if (typeof window !== "undefined") {
         ensureAudioContext();
@@ -756,20 +801,19 @@ export default function ConversationPage() {
       }
 
       setState("listening");
+      stateRef.current = "listening";
 
       if (recognitionRef.current) {
         try {
           recognitionRef.current.start();
         } catch (e) {
           console.warn("Could not start speech recognition:", e);
-          const errorMsg: Message = {
-            id: "err-" + Date.now(),
-            role: "ai",
-            content: "Could not start speech recognition. Please check your microphone connection or type your message below.",
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, errorMsg]);
-          setState("idle");
+          try {
+            recognitionRef.current.stop();
+            setTimeout(() => {
+              try { recognitionRef.current.start(); } catch (err) {}
+            }, 100);
+          } catch (err) {}
         }
       } else {
         const errorMsg: Message = {
@@ -780,8 +824,15 @@ export default function ConversationPage() {
         };
         setMessages((prev) => [...prev, errorMsg]);
         setState("idle");
+        stateRef.current = "idle";
       }
     } else if (state === "listening") {
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      const textToSubmit = transcriptRef.current.trim();
+      transcriptRef.current = "";
+      accumulatedTranscriptRef.current = "";
+      setLiveTranscript("");
+
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
@@ -789,7 +840,13 @@ export default function ConversationPage() {
           console.warn("Speech recognition stop failed", e);
         }
       }
-      setState("idle");
+
+      if (textToSubmit) {
+        processInput(textToSubmit);
+      } else {
+        setState("idle");
+        stateRef.current = "idle";
+      }
     } else if (state === "speaking") {
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
@@ -806,6 +863,7 @@ export default function ConversationPage() {
       }
       setIsPaused(false);
       setState("idle");
+      stateRef.current = "idle";
     }
   }, [state, processInput, ensureAudioContext]);
 
@@ -967,6 +1025,18 @@ export default function ConversationPage() {
               ? "Processing your response..."
               : "AI Coach is speaking..."}
           </motion.p>
+
+                    {/* Live speech preview pill */}
+          {state === "listening" && liveTranscript && (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-2 mb-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/40 text-primary-light text-xs max-w-md text-center shadow-lg"
+            >
+              <span className="font-semibold text-white">Listening: </span>
+              "{liveTranscript}"
+            </motion.div>
+          )}
 
           {/* Animated Orb */}
           <AnimatedOrb state={state} onClick={handleMicClick} />

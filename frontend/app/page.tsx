@@ -69,12 +69,12 @@ function Navbar() {
           {/* CTA */}
           <div className="hidden md:flex items-center gap-3">
             <Link
-              href="/sign-in"
+              href="/dashboard"
               className="text-sm text-muted-foreground hover:text-white transition-colors px-4 py-2"
             >
-              Sign In
+              Open App
             </Link>
-            <Link href="/sign-in" className="btn-primary text-sm !py-2 !px-5">
+            <Link href="/dashboard" className="btn-primary text-sm !py-2 !px-5">
               Start Free
             </Link>
           </div>
@@ -110,10 +110,10 @@ function Navbar() {
                 </a>
               ))}
               <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
-                <Link href="/sign-in" className="btn-secondary text-sm text-center">
-                  Sign In
+                <Link href="/dashboard" className="btn-secondary text-sm text-center">
+                  Open App
                 </Link>
-                <Link href="/sign-in" className="btn-primary text-sm text-center">
+                <Link href="/dashboard" className="btn-primary text-sm text-center">
                   Start Free
                 </Link>
               </div>
@@ -192,7 +192,7 @@ function HeroSection() {
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
           <Link
-            href="/sign-in"
+            href="/dashboard"
             className="btn-primary text-base flex items-center gap-2 !px-8 !py-3.5"
           >
             Start Free <ArrowRight className="w-5 h-5" />
@@ -625,7 +625,7 @@ function PricingSection() {
               <p className="text-xs text-muted-foreground mt-2">No payment required. Ever.</p>
               
               <Link
-                href="/sign-in"
+                href="/dashboard"
                 className="w-full mt-6 text-center text-sm font-bold py-3.5 px-6 rounded-xl btn-primary shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all cursor-pointer"
               >
                 Get Started Now
@@ -761,7 +761,7 @@ function CTASection() {
               with SpeakIntel AI. Start your journey today — it&apos;s free!
             </p>
             <Link
-              href="/sign-in"
+              href="/dashboard"
               className="btn-primary text-base inline-flex items-center gap-2 !px-10 !py-4"
             >
               Start Free Today <ArrowRight className="w-5 h-5" />

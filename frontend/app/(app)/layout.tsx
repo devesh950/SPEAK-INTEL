@@ -76,14 +76,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [editImage, setEditImage] = useState("");
 
   useEffect(() => {
-    if (status === "loading") return;
-
-    if (status === "authenticated") {
-      setAuthorized(true);
-    } else {
-      router.push(`/sign-in?callbackUrl=${encodeURIComponent(pathname)}`);
-    }
-  }, [pathname, router, status]);
+    // Open access - no login required
+    setAuthorized(true);
+  }, [pathname]);
 
   // Sync profile details with session or local state
   useEffect(() => {

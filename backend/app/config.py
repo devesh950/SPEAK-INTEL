@@ -7,10 +7,16 @@ from typing import List
 import os
 
 # Dynamic environment variable fallback mapping for naming mismatches in Render
-if "Gemini_key" in os.environ:
-    os.environ["GEMINI_API_KEY"] = os.environ["Gemini_key"]
-if "GROQ_API_KEY" not in os.environ and "Groq_key" in os.environ:
-    os.environ["GROQ_API_KEY"] = os.environ["Groq_key"]
+for k in ["GROQ_API_KEY", "groq_api_key", "Groq_api_key", "GROQ_KEY", "groq_key", "Groq_key", "GROQ", "groq"]:
+    if k in os.environ and os.environ[k]:
+        os.environ["GROQ_API_KEY"] = os.environ[k].strip()
+        break
+
+for k in ["GEMINI_API_KEY", "gemini_api_key", "Gemini_api_key", "GEMINI_KEY", "gemini_key", "Gemini_key", "GEMINI", "gemini"]:
+    if k in os.environ and os.environ[k]:
+        os.environ["GEMINI_API_KEY"] = os.environ[k].strip()
+        break
+
 if "Database_url" in os.environ:
     os.environ["DATABASE_URL"] = os.environ["Database_url"]
 if "nextauth" in os.environ:

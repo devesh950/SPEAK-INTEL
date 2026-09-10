@@ -75,15 +75,12 @@ ROLEPLAY_PROMPTS = {
     "tourist": "You are a foreign tourist asking for help. Speak with slight language difficulties.",
 }
 
-# Groq models to try in order of preference (all free tier)
+# Groq models to try in order of preference (verified active 2026-09)
 GROQ_MODELS = [
-    "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant",
-    "llama3-70b-8192",
-    "llama3-8b-8192",
-    "gemma2-9b-it",
-    "deepseek-r1-distill-llama-70b",
-    "qwen-2.5-32b",
+    "groq/compound-mini",          # Groq native – fast, free tier
+    "openai/gpt-oss-20b",          # OpenAI OSS 20B via Groq – free tier
+    "qwen/qwen3.8-27b",            # Qwen 3.8-27B – good quality
+    "openai/gpt-oss-120b",         # OpenAI OSS 120B via Groq – largest
 ]
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"

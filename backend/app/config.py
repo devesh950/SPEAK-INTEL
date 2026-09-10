@@ -49,7 +49,9 @@ class Settings(BaseSettings):
     cors_origins: List[str] = [
         "http://localhost:3000",
         "https://speak-intel.vercel.app",
-        "https://speakintel.vercel.app"
+        "https://speakintel.vercel.app",
+        "https://speak-intel-1.vercel.app",
+        "https://speakintel-ai.vercel.app",
     ]
     
     # Auth

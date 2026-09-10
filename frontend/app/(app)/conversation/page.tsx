@@ -230,6 +230,7 @@ export default function ConversationPage() {
 
   const [state, setState] = useState<ConversationState>("idle");
   const [messages, setMessages] = useState<Message[]>([]);
+  const messagesRef = useRef<Message[]>([]);
   const [showTranscript, setShowTranscript] = useState(false);
   const [inputText, setInputText] = useState("");
   const [isPaused, setIsPaused] = useState(false);
@@ -240,6 +241,10 @@ export default function ConversationPage() {
   useEffect(() => {
     handsFreeModeRef.current = handsFreeMode;
   }, [handsFreeMode]);
+  // Keep messagesRef in sync so processInput always has latest messages
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const recognitionRef = useRef<any>(null);
@@ -457,13 +462,14 @@ export default function ConversationPage() {
     const chunks = sentences.filter((s) => s.trim().length > 0);
 
     if (chunks.length === 0) {
+      setIsPaused(false);
+      setState("idle");
+      stateRef.current = "idle";
       if (handsFreeModeRef.current) {
         setTimeout(() => {
           startListening();
         }, 350);
       } else {
-        setState("idle");
-        stateRef.current = "idle";
         if (onEndCallback) onEndCallback();
       }
       return;
@@ -483,13 +489,15 @@ export default function ConversationPage() {
       }
       if (chunkIndex >= chunks.length) {
         setIsPaused(false);
+        // Reset state to idle BEFORE calling startListening,
+        // because startListening guards against state === "speaking"
+        setState("idle");
+        stateRef.current = "idle";
         if (handsFreeModeRef.current) {
           setTimeout(() => {
             startListening();
           }, 350);
         } else {
-          setState("idle");
-          stateRef.current = "idle";
           if (onEndCallback) onEndCallback();
         }
         return;
@@ -602,6 +610,9 @@ export default function ConversationPage() {
       setState("thinking");
       stateRef.current = "thinking";
 
+      // Use messagesRef for always-fresh snapshot (avoids stale closure)
+      const currentMessages = messagesRef.current;
+
       const userMsg: Message = {
         id: Date.now().toString(),
         role: "user",
@@ -610,13 +621,13 @@ export default function ConversationPage() {
       };
 
       setMessages((prev) => [...prev, userMsg]);
-      if (messages.length === 0) {
+      if (currentMessages.length === 0) {
         updateRealtimeProgress("session");
       }
       updateRealtimeProgress("practice", 1);
 
       try {
-        const apiHistory = messages.map((m) => ({
+        const apiHistory = currentMessages.map((m) => ({
           role: m.role === "user" ? "user" : "assistant",
           content: m.content,
         }));
@@ -672,8 +683,22 @@ export default function ConversationPage() {
           setState("idle");
           stateRef.current = "idle";
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("API request failed, fallback to offline AI analysis.", error);
+
+        // If it's a timeout / server cold-start, tell the user to retry
+        const isTimeout = error?.message?.includes("timed out") || error?.name === "AbortError";
+        if (isTimeout) {
+          const timeoutMsg: Message = {
+            id: (Date.now() + 1).toString(),
+            role: "ai",
+            content: "The AI server is warming up — this usually takes 10–20 seconds on first use. Please tap the mic and try speaking again!",
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, timeoutMsg]);
+          speakText(timeoutMsg.content);
+          return;
+        }
 
         let corrected = cleanText;
         let explanation = "Your sentence structure is clear! Keep practicing.";
@@ -728,7 +753,8 @@ export default function ConversationPage() {
         speakText(aiMsg.content);
       }
     },
-    [messages, speakText]
+    // No longer depends on messages — uses messagesRef instead
+    [speakText]
   );
 
   // Initialize Speech Recognition API

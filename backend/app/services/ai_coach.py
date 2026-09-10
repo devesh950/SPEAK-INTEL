@@ -123,7 +123,7 @@ class AICoach:
             }
         }
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=45.0) as client:
             try:
                 response = await client.post(url, json=payload)
                 if response.status_code == 200:
@@ -151,7 +151,7 @@ class AICoach:
             messages.append({"role": role, "content": msg["content"]})
         messages.append({"role": "user", "content": user_message})
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=45.0) as client:
             for model_name in GROQ_MODELS:
                 payload = {
                     "model": model_name,

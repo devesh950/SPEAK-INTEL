@@ -233,6 +233,21 @@ export default function ConversationPage() {
   // Read mode & role from URL (?mode=interview&role=data-analyst)
   const urlMode = searchParams.get("mode") || "general";
   const urlRole = searchParams.get("role") || undefined;
+  const urlChallenge = searchParams.get("challenge") || undefined;
+  const urlPrompt = searchParams.get("prompt") || undefined;
+
+  // Challenge title labels
+  const challengeLabels: Record<string, string> = {
+    introduce: "Introduce Yourself",
+    story: "Tell a Story",
+    describe: "Describe a Picture",
+    debate: "Debate",
+    explain: "Explain a Topic",
+    news: "News Discussion",
+    random: "Random Conversation",
+    presentation: "Presentation Practice",
+    elevator: "Elevator Pitch",
+  };
 
   // Human-readable label maps
   const roleLabels: Record<string, string> = {
@@ -270,6 +285,8 @@ export default function ConversationPage() {
       ? `Interview: ${roleLabels[urlRole ?? ""] ?? urlRole ?? "General"}`
       : urlMode === "roleplay"
       ? `Roleplay: ${roleLabels[urlRole ?? ""] ?? urlRole ?? "General"}`
+      : urlMode === "challenge"
+      ? `Challenge: ${challengeLabels[urlChallenge ?? ""] ?? "Speaking Challenge"}`
       : "AI Conversation";
 
 
@@ -364,6 +381,9 @@ export default function ConversationPage() {
       welcomeText = `Hello ${firstName}! I will be your interviewer for the ${roleName} role today. Let's start with a quick introduction — please tell me about yourself and your experience relevant to ${roleName}.`;
     } else if (urlMode === "roleplay") {
       welcomeText = `Hello ${firstName}! We are starting a "${roleName}" roleplay session. I will play my character and you respond naturally. Let's begin! Tap the microphone when you are ready.`;
+    } else if (urlMode === "challenge" && urlChallenge) {
+      const challengeName = challengeLabels[urlChallenge] ?? "Speaking Challenge";
+      welcomeText = `Hello ${firstName}! Today's challenge is: "${challengeName}". When you are ready, tap the microphone and begin. I will listen carefully and give you detailed feedback on your fluency, grammar, and vocabulary at the end. Good luck!`;
     } else {
       welcomeText = `Hello ${firstName}! I am SpeakIntel AI, your personal English speaking coach. I am ready to help you practice. Tap the center microphone to start speaking, or type a message below!`;
     }
@@ -689,7 +709,16 @@ export default function ConversationPage() {
           content: m.content,
         }));
 
-        const data = await sendMessage(cleanText, apiHistory, urlMode, urlRole, "intermediate");
+        // For challenge mode: on the first message, prepend the challenge prompt as context
+        const isFirstUserMessage = currentMessages.filter((m) => m.role === "user").length === 0;
+        const messageToSend =
+          urlMode === "challenge" && urlPrompt && isFirstUserMessage
+            ? `${urlPrompt}\n\nHere is my response:\n${cleanText}`
+            : cleanText;
+
+        // Challenges are coached like general but with the specific prompt context
+        const effectiveMode = urlMode === "challenge" ? "general" : urlMode;
+        const data = await sendMessage(messageToSend, apiHistory, effectiveMode, urlRole, "intermediate");
 
         const aiMsg: Message = {
           id: (Date.now() + 1).toString(),
@@ -1024,12 +1053,12 @@ export default function ConversationPage() {
         avgScore = (lastAIScores.scores.grammar + lastAIScores.scores.fluency + lastAIScores.scores.vocabulary) / 3;
       }
       
-      // Calculate minutes (approx 30s per user message exchange)
       const practiceMinutes = Math.max(1, Math.round(messages.length / 2));
       const activityType = urlMode === "interview" ? "interview" : urlMode === "roleplay" ? "roleplay" : "conversation";
       const activityLabel =
         urlMode === "interview" ? `Interview: ${roleLabels[urlRole ?? ""] ?? urlRole ?? "General"}`
         : urlMode === "roleplay" ? `Roleplay: ${roleLabels[urlRole ?? ""] ?? urlRole ?? "General"}`
+        : urlMode === "challenge" ? `Challenge: ${challengeLabels[urlChallenge ?? ""] ?? "Speaking Challenge"}`
         : "General Conversation";
       addRecentActivity(
         activityType as any,
@@ -1037,6 +1066,15 @@ export default function ConversationPage() {
         Number(avgScore.toFixed(1)),
         `${practiceMinutes} min`
       );
+
+      // Mark challenge as completed in localStorage
+      if (urlMode === "challenge" && urlChallenge) {
+        try {
+          const existing = JSON.parse(localStorage.getItem("speakintel-completed-challenges") || "[]");
+          const updated = Array.from(new Set([...existing, urlChallenge]));
+          localStorage.setItem("speakintel-completed-challenges", JSON.stringify(updated));
+        } catch {}
+      }
     }
 
     setState("idle");
@@ -1076,6 +1114,11 @@ export default function ConversationPage() {
                   Roleplay
                 </span>
               )}
+              {urlMode === "challenge" && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">
+                  ⚡ Challenge
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               {state === "listening"
@@ -1084,7 +1127,7 @@ export default function ConversationPage() {
                 ? "Thinking..."
                 : state === "speaking"
                 ? "Speaking..."
-                : urlMode === "interview" ? "Your interviewer is ready" : urlMode === "roleplay" ? "In character, ready" : "Tap the mic to start"}
+                : urlMode === "interview" ? "Your interviewer is ready" : urlMode === "roleplay" ? "In character, ready" : urlMode === "challenge" ? "Tap mic and begin your challenge" : "Tap the mic to start"}
             </p>
           </div>
         </div>

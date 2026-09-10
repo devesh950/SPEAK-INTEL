@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic,
@@ -227,6 +228,50 @@ function FeedbackCard({
 
 export default function ConversationPage() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+
+  // Read mode & role from URL (?mode=interview&role=data-analyst)
+  const urlMode = searchParams.get("mode") || "general";
+  const urlRole = searchParams.get("role") || undefined;
+
+  // Human-readable label maps
+  const roleLabels: Record<string, string> = {
+    // interview roles
+    "software-engineer": "Software Engineer",
+    "data-analyst": "Data Analyst",
+    "data-scientist": "Data Scientist",
+    "product-manager": "Product Manager",
+    "hr": "HR Manager",
+    "marketing": "Marketing",
+    "sales": "Sales",
+    "mba": "MBA",
+    "frontend-developer": "Frontend Developer",
+    "backend-developer": "Backend Developer",
+    // roleplay roles
+    "hr_interview": "HR Interview",
+    "friend": "Friend Chat",
+    "business_meeting": "Business Meeting",
+    "teacher": "Teacher",
+    "customer_support": "Customer Support",
+    "sales_pitch": "Sales Pitch",
+    "college_viva": "College Viva",
+    "group_discussion": "Group Discussion",
+    "public_speaking": "Public Speaking",
+    "travel": "Travel",
+    "restaurant": "Restaurant",
+    "doctor": "Doctor Visit",
+    "receptionist": "Receptionist",
+    "ceo": "CEO Meeting",
+    "tourist": "Foreign Tourist",
+  };
+
+  const modeLabel =
+    urlMode === "interview"
+      ? `Interview: ${roleLabels[urlRole ?? ""] ?? urlRole ?? "General"}`
+      : urlMode === "roleplay"
+      ? `Roleplay: ${roleLabels[urlRole ?? ""] ?? urlRole ?? "General"}`
+      : "AI Conversation";
+
 
   const [state, setState] = useState<ConversationState>("idle");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -308,15 +353,25 @@ export default function ConversationPage() {
     }
   }, [ensureAudioContext]);
 
-  // Load initial welcome greeting and pre-load voices to avoid async browser delay
+  // Load initial welcome greeting based on mode/role
   useEffect(() => {
     const storedName = localStorage.getItem("speakintel-username") || session?.user?.name || "Learner";
     const firstName = storedName.split(" ")[0];
+    const roleName = roleLabels[urlRole ?? ""] ?? urlRole ?? "";
+
+    let welcomeText = "";
+    if (urlMode === "interview") {
+      welcomeText = `Hello ${firstName}! I will be your interviewer for the ${roleName} role today. Let's start with a quick introduction — please tell me about yourself and your experience relevant to ${roleName}.`;
+    } else if (urlMode === "roleplay") {
+      welcomeText = `Hello ${firstName}! We are starting a "${roleName}" roleplay session. I will play my character and you respond naturally. Let's begin! Tap the microphone when you are ready.`;
+    } else {
+      welcomeText = `Hello ${firstName}! I am SpeakIntel AI, your personal English speaking coach. I am ready to help you practice. Tap the center microphone to start speaking, or type a message below!`;
+    }
 
     const welcomeMsg: Message = {
       id: "welcome-coach",
       role: "ai",
-      content: `Hello ${firstName}! I am SpeakIntel AI, your personal English speaking coach. I am ready to help you practice. Tap the center microphone to start speaking, or type a message below!`,
+      content: welcomeText,
       timestamp: new Date(),
     };
     setMessages([welcomeMsg]);
@@ -328,7 +383,9 @@ export default function ConversationPage() {
       loadVoices();
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
+
 
   const stateRef = useRef<ConversationState>("idle");
   useEffect(() => {
@@ -632,7 +689,7 @@ export default function ConversationPage() {
           content: m.content,
         }));
 
-        const data = await sendMessage(cleanText, apiHistory, "general", undefined, "intermediate");
+        const data = await sendMessage(cleanText, apiHistory, urlMode, urlRole, "intermediate");
 
         const aiMsg: Message = {
           id: (Date.now() + 1).toString(),
@@ -969,9 +1026,14 @@ export default function ConversationPage() {
       
       // Calculate minutes (approx 30s per user message exchange)
       const practiceMinutes = Math.max(1, Math.round(messages.length / 2));
+      const activityType = urlMode === "interview" ? "interview" : urlMode === "roleplay" ? "roleplay" : "conversation";
+      const activityLabel =
+        urlMode === "interview" ? `Interview: ${roleLabels[urlRole ?? ""] ?? urlRole ?? "General"}`
+        : urlMode === "roleplay" ? `Roleplay: ${roleLabels[urlRole ?? ""] ?? urlRole ?? "General"}`
+        : "General Conversation";
       addRecentActivity(
-        "conversation",
-        "General Conversation",
+        activityType as any,
+        activityLabel,
         Number(avgScore.toFixed(1)),
         `${practiceMinutes} min`
       );
@@ -1002,7 +1064,19 @@ export default function ConversationPage() {
             <X className="w-5 h-5" />
           </a>
           <div>
-            <h1 className="text-sm font-semibold">AI Conversation</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-semibold">{modeLabel}</h1>
+              {urlMode === "interview" && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium">
+                  Interview
+                </span>
+              )}
+              {urlMode === "roleplay" && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-medium">
+                  Roleplay
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               {state === "listening"
                 ? "Listening..."
@@ -1010,7 +1084,7 @@ export default function ConversationPage() {
                 ? "Thinking..."
                 : state === "speaking"
                 ? "Speaking..."
-                : "Tap the mic to start"}
+                : urlMode === "interview" ? "Your interviewer is ready" : urlMode === "roleplay" ? "In character, ready" : "Tap the mic to start"}
             </p>
           </div>
         </div>

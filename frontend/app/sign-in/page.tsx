@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "next/navigation";
-import { Mic, AlertCircle, Globe, Brain, MessageCircle, Volume2, Star } from "lucide-react";
+import { Mic, AlertCircle, Sparkles, Globe, Brain, MessageCircle, Volume2, Star } from "lucide-react";
 import { signIn } from "next-auth/react";
 
 const features = [

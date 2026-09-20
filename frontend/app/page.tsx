@@ -189,18 +189,7 @@ function HeroSection() {
       />
 
       <div className="relative z-10 max-w-5xl mx-auto px-4 text-center">
-        {/* Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass mb-8"
-        >
-          <Sparkles className="w-4 h-4 text-primary-light" />
-          <span className="text-sm text-muted-foreground">
-            Powered by Google Gemini AI
-          </span>
-        </motion.div>
+
 
         {/* Headline */}
         <motion.h1

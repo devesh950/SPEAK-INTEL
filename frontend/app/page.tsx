@@ -266,9 +266,9 @@ function HeroSection() {
           className="flex items-center justify-center gap-8 sm:gap-12 mt-16"
         >
           {[
-            { value: "50K+", label: "Active Users" },
-            { value: "2M+", label: "Conversations" },
-            { value: "4.9", label: "App Rating" },
+            { value: "2K+", label: "Active Users" },
+            { value: "18K+", label: "Conversations" },
+            { value: "4.8", label: "App Rating" },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
               <p className="text-2xl sm:text-3xl font-bold gradient-text">
@@ -540,7 +540,7 @@ function TestimonialsSection() {
             Testimonials
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold mt-3 mb-4">
-            Loved by <span className="gradient-text">Thousands</span>
+            Loved by Our <span className="gradient-text">Early Users</span>
           </h2>
         </motion.div>
 
@@ -681,7 +681,7 @@ function PricingSection() {
               <p className="text-xs text-muted-foreground mt-2">No payment required. Ever.</p>
               
               <Link
-                href="/dashboard"
+                href="/sign-in"
                 className="w-full mt-6 text-center text-sm font-bold py-3.5 px-6 rounded-xl btn-primary shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all cursor-pointer"
               >
                 Get Started Now
@@ -813,14 +813,14 @@ function CTASection() {
               <span className="gradient-text">Communication?</span>
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto mb-8">
-              Join thousands of learners who are already improving their English
+              Join 2,000+ early learners already improving their English
               with SpeakIntel AI. Start your journey today — it&apos;s free!
             </p>
             <Link
-              href="/dashboard"
+              href="/sign-in"
               className="btn-primary text-base inline-flex items-center gap-2 !px-10 !py-4"
             >
-              Start Free Today <ArrowRight className="w-5 h-5" />
+              Get Started Free <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
         </motion.div>

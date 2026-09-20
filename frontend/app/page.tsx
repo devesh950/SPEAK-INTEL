@@ -79,12 +79,6 @@ function Navbar() {
 
           {/* CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="text-sm text-muted-foreground hover:text-white transition-colors px-4 py-2"
-            >
-              Open App
-            </Link>
             <button
               id="navbar-google-signin"
               onClick={handleGoogleSignIn}
@@ -139,9 +133,6 @@ function Navbar() {
                 </a>
               ))}
               <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
-                <Link href="/dashboard" className="btn-secondary text-sm text-center">
-                  Open App
-                </Link>
                 <button
                   id="mobile-google-signin"
                   onClick={handleGoogleSignIn}
@@ -240,7 +231,7 @@ function HeroSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="flex items-center justify-center"
         >
           <motion.button
             id="hero-google-signin"
@@ -265,12 +256,6 @@ function HeroSection() {
             )}
             {heroLoading ? "Signing in..." : "Sign in with Google"}
           </motion.button>
-          <Link
-            href="/dashboard"
-            className="btn-secondary text-base flex items-center gap-2 !px-8 !py-3.5"
-          >
-            <ArrowRight className="w-5 h-5" /> Enter Free
-          </Link>
         </motion.div>
 
         {/* Stats */}
